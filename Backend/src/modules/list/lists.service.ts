@@ -3,13 +3,13 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { List } from './list.entity';
-import { CreateListDto } from './dto/create-list.dto'; // ✅ correct name
+import { CreateListDto } from './dto/create-list.dto'; //  correct name
 
 @Injectable()
 export class ListsService {
   constructor(
     @InjectRepository(List)
-    private readonly listRepo: Repository<List>, // ✅ use this everywhere
+    private readonly listRepo: Repository<List>, //  use this everywhere
   ) {}
 
   // GET /lists
@@ -28,10 +28,10 @@ export class ListsService {
 
   // POST /lists
   async create(dto: CreateListDto): Promise<List> {
-    const key = dto.key || this.slugify(dto.name); // ✅ dto.name, not title
+    const key = dto.key || this.slugify(dto.name); //  dto.name, not title
 
     const list = this.listRepo.create({
-      name: dto.name, // ✅ matches List.name
+      name: dto.name, //  matches List.name
       key,
     });
 
