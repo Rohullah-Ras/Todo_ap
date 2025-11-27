@@ -60,7 +60,7 @@ export class TasksService {
     if (updateTaskDto.description !== undefined)
       task.description = updateTaskDto.description;
     if (updateTaskDto.listId !== undefined) task.listId = updateTaskDto.listId;
-    if (updateTaskDto.isDone !== undefined) task.isDone = updateTaskDto.isDone;
+    // if (updateTaskDto.isDone !== undefined) task.isDone = updateTaskDto.isDone;
     if (updateTaskDto.statusId !== undefined)
       task.statusId = updateTaskDto.statusId;
 

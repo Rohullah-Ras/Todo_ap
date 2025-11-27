@@ -11,11 +11,11 @@ import { StatusesModule } from './modules/status/statuses.module';
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
-      port: 3001,
-      username: 'postgres',
-      password: 'Welkom01!',
-      database: 'Todo_app',
+      host: process.env.DB_HOST || 'localhost',
+      port: +(process.env.DB_PORT || 3001),
+      username: process.env.DB_USERNAME || 'postgres',
+      password: process.env.DB_PASSWORD || 'Welkom01!',
+      database: process.env.DB_DATABASE || 'Todo_app',
       entities: [Task, List, Status],
       synchronize: true, // auto-create tables in dev
 

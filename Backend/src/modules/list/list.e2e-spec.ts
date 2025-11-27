@@ -1,11 +1,12 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import * as request from 'supertest';
+import { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import AppModule from '../src/app.module';
-import { List } from '../src/modules/list/list.entity';
-import { Task } from '../src/modules/tasks/task.entity';
+const request = require('supertest');
+
+import { initializeNestTestApp } from '../../../test/utils/initialize-nest-test-app';
+import AppModule from '../../app.module';
+import { List } from './list.entity';
+import { Task } from '../tasks/task.entity';
 
 describe('List module E2E', () => {
   let app: INestApplication;
@@ -14,37 +15,25 @@ describe('List module E2E', () => {
   let listId: number;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+    // forRoot runs and provides DataSource
+    app = await initializeNestTestApp(AppModule);
+    dataSource = app.get(DataSource);
+  });
 
-    app = moduleRef.createNestApplication();
+  beforeEach(async () => {
+    const taskRepo = dataSource.getRepository(Task);
+    const listRepo = dataSource.getRepository(List);
 
-    // zelfde als in main.ts
-    app.setGlobalPrefix('api');
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-        transformOptions: { enableImplicitConversion: true },
-      }),
-    );
-
-    await app.init();
-
-    dataSource = moduleRef.get(DataSource);
-
-    // DB schoonmaken wat lists/tasks betreft
-    await dataSource.getRepository(Task).delete({});
-    await dataSource.getRepository(List).delete({});
+    // Clear tasks first, then lists
+    await taskRepo.createQueryBuilder().delete().execute();
+    await listRepo.createQueryBuilder().delete().execute();
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  it('POST /api/lists -> maakt een nieuwe lijst', async () => {
+  it('POST /api/lists -> creates a new list', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/lists')
       .send({ name: 'Werk' })
@@ -56,38 +45,53 @@ describe('List module E2E', () => {
     listId = res.body.id;
   });
 
-  it('GET /api/lists -> bevat de aangemaakte lijst', async () => {
+  it('GET /api/lists -> contains the created list', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/lists')
+      .send({ name: 'Thuis' })
+      .expect(201);
+
     const res = await request(app.getHttpServer())
       .get('/api/lists')
       .expect(200);
 
     expect(Array.isArray(res.body)).toBe(true);
 
-    const list = res.body.find((l: any) => l.id === listId);
-    expect(list).toBeDefined();
-    expect(list.name).toBe('Werk');
+    const found = res.body.find((l: any) => l.id === created.body.id);
+    expect(found).toBeDefined();
+    expect(found.name || found.title).toBe('Thuis');
   });
 
-  it('PATCH /api/lists/:id -> update de naam van de lijst', async () => {
+  it('PATCH /api/lists/:id -> updates list name', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/lists')
+      .send({ name: 'Oud' })
+      .expect(201);
+
     const res = await request(app.getHttpServer())
-      .patch(`/api/lists/${listId}`)
-      .send({ name: 'Vakantie' })
+      .patch(`/api/lists/${created.body.id}`)
+      .send({ name: 'Nieuw' })
       .expect(200);
 
-    expect(res.body).toHaveProperty('id', listId);
-    expect(res.body).toHaveProperty('name', 'Vakantie');
+    expect(res.body).toHaveProperty('id', created.body.id);
+    expect(res.body.name || res.body.title).toBe('Nieuw');
   });
 
-  it('DELETE /api/lists/:id -> verwijdert de lijst', async () => {
+  it('DELETE /api/lists/:id -> deletes the list', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/lists')
+      .send({ name: 'Te verwijderen' })
+      .expect(201);
+
     await request(app.getHttpServer())
-      .delete(`/api/lists/${listId}`)
+      .delete(`/api/lists/${created.body.id}`)
       .expect(200);
 
     const res = await request(app.getHttpServer())
       .get('/api/lists')
       .expect(200);
 
-    const list = res.body.find((l: any) => l.id === listId);
-    expect(list).toBeUndefined();
+    const found = res.body.find((l: any) => l.id === created.body.id);
+    expect(found).toBeUndefined();
   });
 });

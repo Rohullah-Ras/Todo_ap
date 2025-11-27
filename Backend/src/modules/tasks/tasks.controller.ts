@@ -33,7 +33,7 @@ export class TasksController {
     return this.tasksService.findByList(listId);
   }
 
-  // ✅ ADDED @Get()
+  //  ADDED @Get()
   @Get()
   @ApiOperation({ summary: 'Get all tasks' })
   @ApiResponse({ status: 200, type: [Task] })
@@ -53,9 +53,9 @@ export class TasksController {
   @ApiOperation({ summary: 'Update a task (title, description, list, status)' })
   @ApiResponse({ status: 200, type: Task })
   @ApiResponse({ status: 404, description: 'Task not found' })
-  // ✅ use dto instead of non-existing updateTaskDto
+  // use dto instead of non-existing updateTaskDto
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTaskDto) {
-    return this.tasksService.update(id, dto);
+    return this.tasksService.update(+id, dto);
   }
 
   @Delete(':id')

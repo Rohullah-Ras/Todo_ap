@@ -34,9 +34,9 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
   @IsInt()
   listId?: number;
 
-  @IsOptional()
-  @IsBoolean()
-  isDone?: boolean;
+  // @IsOptional()
+  // @IsBoolean()
+  // isDone?: boolean;
 
   @IsOptional()
   @Type(() => Number)

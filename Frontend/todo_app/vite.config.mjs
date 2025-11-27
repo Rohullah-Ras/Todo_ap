@@ -4,11 +4,17 @@ import Vue from '@vitejs/plugin-vue'
 import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import Fonts from 'unplugin-fonts/vite'
 import VueRouter from 'unplugin-vue-router/vite'
+import * as dotenv from 'dotenv';
+import * as path from 'path';
 
 // Utilities
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
 
+
+dotenv.config({
+    path: path.resolve(__dirname, '../.env.test'),
+});
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
