@@ -503,7 +503,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mdi/font@npm:7.4.47":
+"@mdi/font@npm:^7.4.47":
   version: 7.4.47
   resolution: "@mdi/font@npm:7.4.47"
   checksum: 10c0/4cd44a9e9c40218f00d2500f7408f913ac276348054c9c1b0108330060fecb3cb58c8c08eda39a7535298aaf3f1d28c0c115751cfe9fc2c9cdb9d50450107db9
@@ -4007,6 +4007,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sortablejs@npm:1.14.0":
+  version: 1.14.0
+  resolution: "sortablejs@npm:1.14.0"
+  checksum: 10c0/b792790286d54af5ebb083300d0cb3f96f5cf840e85f4953aa2074a69c1671a3d6a73f8d5fcc948b27c0573575ff98ec32346f7dcfe6230d517d7a81ea7ad314
+  languageName: node
+  linkType: hard
+
 "source-map-js@npm:>=0.6.2 <2.0.0, source-map-js@npm:^1.2.1":
   version: 1.2.1
   resolution: "source-map-js@npm:1.2.1"
@@ -4173,7 +4180,7 @@ __metadata:
   resolution: "todo_app@workspace:."
   dependencies:
     "@fontsource/roboto": "npm:5.2.7"
-    "@mdi/font": "npm:7.4.47"
+    "@mdi/font": "npm:^7.4.47"
     "@vitejs/plugin-vue": "npm:^6.0.1"
     axios: "npm:^1.13.2"
     eslint: "npm:^9.35.0"
@@ -4186,6 +4193,7 @@ __metadata:
     vite-plugin-vuetify: "npm:^2.1.2"
     vue: "npm:^3.5.21"
     vue-router: "npm:^4.5.1"
+    vuedraggable: "npm:^4.1.0"
     vuetify: "npm:^3.10.1"
   languageName: unknown
   linkType: soft
@@ -4525,6 +4533,17 @@ __metadata:
     typescript:
       optional: true
   checksum: 10c0/78354f29737fb661cfa0830d4c3f3e9e84311a131768807475bf66cc6a938b581cec29ec28f7e29378a13651cac649549d9e979eea1a0fae6b43cbe1c51e4d92
+  languageName: node
+  linkType: hard
+
+"vuedraggable@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "vuedraggable@npm:4.1.0"
+  dependencies:
+    sortablejs: "npm:1.14.0"
+  peerDependencies:
+    vue: ^3.0.1
+  checksum: 10c0/e5121ca53081e63f6a3e1dc4c3c02ae86fd6b896ccf37d9a0f88abb993fd9da3a1b54635541854a2a85b65e30dae00e545a2c208708e7df73424bd64c2e59cbc
   languageName: node
   linkType: hard
 
