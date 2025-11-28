@@ -1,9 +1,10 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
+  BeforeInsert,
   Column,
-  OneToMany,
   CreateDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Task } from '../tasks/task.entity';
 
@@ -13,7 +14,7 @@ export class List {
   id: number;
 
   // name: vakantie, school, etc.
-  @Column()
+  @Column('varchar', '255')
   name: string;
 
   // key used for columns: 'todo', 'in-progress', 'done' (for your current board)
@@ -25,4 +26,14 @@ export class List {
 
   @OneToMany(() => Task, (task) => task.list)
   tasks: Task[];
+
+  @BeforeInsert()
+  setKey() {
+    if (!this.key) {
+      const base =
+        this.name?.trim().toLowerCase().replace(/\s+/g, '-') || 'list';
+      const random = Math.random().toString(36).slice(2, 8); // 6-char suffix
+      this.key = `${base}-${random}`;
+    }
+  }
 }

@@ -1,15 +1,14 @@
-// src/modules/list/lists.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { List } from './list.entity';
-import { CreateListDto } from './dto/create-list.dto'; //  correct name
+import { CreateListDto } from './dto/create-list.dto';
 
 @Injectable()
 export class ListsService {
   constructor(
     @InjectRepository(List)
-    private readonly listRepo: Repository<List>, //  use this everywhere
+    private readonly listRepo: Repository<List>,
   ) {}
 
   // GET /lists

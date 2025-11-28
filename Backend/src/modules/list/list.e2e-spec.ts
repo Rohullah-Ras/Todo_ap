@@ -1,8 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-
-const request = require('supertest');
-
+import request from 'supertest';
 import { initializeNestTestApp } from '../../../test/utils/initialize-nest-test-app';
 import AppModule from '../../app.module';
 import { List } from './list.entity';
