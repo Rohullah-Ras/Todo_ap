@@ -14,12 +14,12 @@ export class List {
   id: number;
 
   // name: vakantie, school, etc.
-  @Column('varchar', '255')
+  @Column('varchar')
   name: string;
 
   // key used for columns: 'todo', 'in-progress', 'done' (for your current board)
   @Column({ unique: true })
-  key: string;
+  key: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

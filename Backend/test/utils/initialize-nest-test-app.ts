@@ -1,5 +1,7 @@
-import { INestApplication, ValidationPipe, Type } from '@nestjs/common';
+import { INestApplication, Type, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+
+import 'reflect-metadata';
 
 export async function initializeNestTestApp<TModule>(
   module: Type<TModule>,

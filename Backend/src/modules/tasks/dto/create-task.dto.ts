@@ -1,10 +1,11 @@
 import {
-  IsString,
-  IsOptional,
-  MinLength,
-  MaxLength,
-  Matches,
+  IsBoolean,
   IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -50,4 +51,8 @@ export class CreateTaskDto {
   @IsInt()
   @IsOptional()
   statusId: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isDone?: boolean;
 }

@@ -1,13 +1,13 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateTaskDto } from './create-task.dto';
 import {
-  IsOptional,
   IsBoolean,
-  IsString,
-  MinLength,
-  MaxLength,
-  Matches,
   IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -34,9 +34,9 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
   @IsInt()
   listId?: number;
 
-  // @IsOptional()
-  // @IsBoolean()
-  // isDone?: boolean;
+  @IsOptional()
+  @IsBoolean()
+  isDone?: boolean;
 
   @IsOptional()
   @Type(() => Number)
