@@ -18,7 +18,11 @@ export class List {
   name: string;
 
   // key used for columns: 'todo', 'in-progress', 'done' (for your current board)
-  @Column({ unique: true })
+  @Column({
+    type: 'varchar',
+    unique: true,
+    nullable: true,
+  })
   key: string | null;
 
   @CreateDateColumn()

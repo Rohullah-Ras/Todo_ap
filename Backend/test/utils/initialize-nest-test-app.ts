@@ -1,7 +1,11 @@
 import { INestApplication, Type, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import dotenv from 'dotenv';
 
 import 'reflect-metadata';
+
+dotenv.config({ path: `.env.test` });
+process.env.NODE_ENV = 'test';
 
 export async function initializeNestTestApp<TModule>(
   module: Type<TModule>,

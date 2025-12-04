@@ -7,6 +7,12 @@ import { List } from './modules/list/list.entity';
 import { Status } from './modules/status/status.entity';
 import { StatusesModule } from './modules/status/statuses.module';
 
+import * as dotenv from 'dotenv';
+
+const isTest = process.env.NODE_ENV === 'test';
+
+dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
+
 @Module({
   imports: [
     TypeOrmModule.forRoot({
@@ -15,9 +21,11 @@ import { StatusesModule } from './modules/status/statuses.module';
       port: +(process.env.DB_PORT || 3001),
       username: process.env.DB_USERNAME || 'postgres',
       password: process.env.DB_PASSWORD || 'Welkom01!',
-      database: process.env.DB_DATABASE || 'Todo_app',
+      database:
+        process.env.DB_DATABASE || (isTest ? 'Todo_app_test' : 'Todo_app'),
       entities: [Task, List, Status],
-      synchronize: true, // auto-create tables in dev
+      synchronize: isTest || process.env.NODE_ENV === 'development',
+      dropSchema: isTest,
 
       extra: {
         max: 5,

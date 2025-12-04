@@ -54,22 +54,53 @@ export class TasksService {
   }
 
   async update(id: number, updateTaskDto: UpdateTaskDto): Promise<Task> {
-    const task = await this.findOne(id);
-
-    if (updateTaskDto.title !== undefined) task.title = updateTaskDto.title;
-    if (updateTaskDto.description !== undefined)
-      task.description = updateTaskDto.description;
-    if (updateTaskDto.listId !== undefined) task.listId = updateTaskDto.listId;
-    if (updateTaskDto.isDone !== undefined) task.isDone = updateTaskDto.isDone;
-    if (updateTaskDto.statusId !== undefined)
-      task.statusId = updateTaskDto.statusId;
-
-    await this.taskRepo.save(task);
-
-    return this.taskRepo.findOne({
-      where: { id: task.id },
+    const task = await this.taskRepo.findOne({
+      where: { id },
       relations: ['list', 'status'],
-    }) as Promise<Task>;
+    });
+
+    if (!task) {
+      throw new NotFoundException(`Task #${id} not found`);
+    }
+
+    if (updateTaskDto.title !== undefined) {
+      task.title = updateTaskDto.title;
+    }
+
+    if (updateTaskDto.description !== undefined) {
+      task.description = updateTaskDto.description;
+    }
+
+    if (updateTaskDto.listId !== undefined) {
+      task.listId = updateTaskDto.listId;
+    }
+
+    if (updateTaskDto.isDone !== undefined) {
+      task.isDone = updateTaskDto.isDone;
+    }
+
+    if (updateTaskDto.statusId !== undefined) {
+      if (updateTaskDto.statusId === null) {
+        task.status = null;
+        task.statusId = null;
+      } else {
+        const status = await this.statusRepo.findOneByOrFail({
+          id: updateTaskDto.statusId,
+        });
+
+        // keep relation + FK in sync
+        task.status = status;
+        task.statusId = status.id;
+      }
+    }
+
+    const saved = await this.taskRepo.save(task);
+
+    // Re-load with relations for response
+    return this.taskRepo.findOne({
+      where: { id: saved.id },
+      relations: ['list', 'status'],
+    });
   }
 
   async remove(id: number): Promise<{ message: string }> {

@@ -27,6 +27,17 @@ describe('Task module E2E', () => {
     const listRepo = dataSource.getRepository(List);
     const statusRepo = dataSource.getRepository(Status);
 
+    // SAFETY: ensure we are connected to the test DB
+    const [{ current_database }] = await dataSource.query(
+      'SELECT current_database()',
+    );
+
+    if (!current_database.endsWith('_test')) {
+      throw new Error(
+        `Refusing to clean database "${current_database}" – not a test DB!`,
+      );
+    }
+
     // Clear tasks -> lists -> statuses in FK-safe order
     await taskRepo.createQueryBuilder().delete().execute();
     await listRepo.createQueryBuilder().delete().execute();
@@ -115,7 +126,16 @@ describe('Task module E2E', () => {
         statusId: doneStatus.id,
       });
 
+    // console.log('PATCH res.body = ', res.body);
+
     // console.log('PATCH /api/tasks/:id ->', res.status, res.body);
+
+    console.log(
+      'Using DB:',
+      process.env.DB_DATABASE,
+      'ENV:',
+      process.env.NODE_ENV,
+    );
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('id', created.body.id);
