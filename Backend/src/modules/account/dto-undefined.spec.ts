@@ -1,4 +1,4 @@
-import { plainToInstance, Type } from 'class-transformer';
+import { instanceToPlain, plainToInstance } from 'class-transformer';
 import { IsInt, IsOptional, validate } from 'class-validator';
 
 class UpdateAccount1 {
@@ -7,25 +7,43 @@ class UpdateAccount1 {
   webwinkelId?: number;
 }
 
-describe('Validation: Partial<Dto> vs ? + @IsOptional', () => {
+describe('UpdateAccount1: undefined behaviour in DTO / transformed object', () => {
   it('moet een bestaande property correct converteren', () => {
-    const validatedDto = plainToInstance(UpdateAccount1, {
-      webwinkelId: 123,
+    const dto = plainToInstance(UpdateAccount1, { webwinkelId: 123 });
+
+    expect('webwinkelId' in dto).toEqual(true);
+    expect(dto.webwinkelId).toEqual(123);
+  });
+
+  it('bij een afwezige property staat de key met waarde undefined in het getransformeerde object', () => {
+    const dto = plainToInstance(UpdateAccount1, {});
+    const plain = instanceToPlain(dto);
+
+    expect('webwinkelId' in plain).toEqual(true);
+    expect(Object.prototype.hasOwnProperty.call(plain, 'webwinkelId')).toEqual(
+      true,
+    );
+    expect(plain.webwinkelId).toBeUndefined();
+  });
+
+  it('met exposeUnsetFields:false wordt de key NIET toegevoegd als de property ontbreekt', () => {
+    const dto = plainToInstance(UpdateAccount1, {});
+    const plain = instanceToPlain(dto, {
+      exposeUnsetFields: false,
     });
-    expect('webwinkelId' in validatedDto).toEqual(true);
-    expect(validatedDto.webwinkelId).toEqual(123);
+
+    expect('webwinkelId' in plain).toEqual(false);
+    expect(Object.prototype.hasOwnProperty.call(plain, 'webwinkelId')).toEqual(
+      false,
+    );
   });
 
-  it('moet voor een afwezige property de key op undefined zetten', () => {
-    const validatedDto = plainToInstance(UpdateAccount1, {});
-    expect('webwinkelId' in validatedDto).toEqual(true);
-    expect(validatedDto.webwinkelId).toBeUndefined();
-  });
+  it('class-validator werkt nog gewoon als de property gezet is', async () => {
+    const dto = new UpdateAccount1();
+    dto.webwinkelId = 123;
 
-  it('moet werken met class validator', async () => {
-    const updateDto = new UpdateAccount1();
-    updateDto.webwinkelId = 123;
-    const result = await validate(updateDto);
-    expect(result).toEqual([]);
+    const result = await validate(dto);
+
+    expect(result).toEqual([]); // geen validation errors
   });
 });

@@ -6,6 +6,7 @@ import { ListsModule } from './modules/list/lists.module';
 import { List } from './modules/list/list.entity';
 import { Status } from './modules/status/status.entity';
 import { StatusesModule } from './modules/status/statuses.module';
+import { AccountModule } from './modules/account/account.module';
 
 import * as dotenv from 'dotenv';
 
@@ -34,6 +35,7 @@ dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
     TasksModule,
     ListsModule,
     StatusesModule,
+    AccountModule,
   ],
 })
 class AppModule {}

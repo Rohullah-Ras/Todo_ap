@@ -15,12 +15,21 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // remove fields not in DTO
-      forbidNonWhitelisted: true, // error if unknown field is sent
-      transform: true, // auto-transform to DTO types
-      transformOptions: {
-        enableImplicitConversion: true, // numbers, booleans, etc.
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      forbidUnknownValues: true,
+      stopAtFirstError: false,
+      // foutdata niet te “leaky”
+      validationError: {
+        target: false, // stuur DTO object zelf niet terug in error
+        value: true,
       },
+      transformOptions: {
+        enableImplicitConversion: true,
+        exposeUnsetFields: false,
+      },
+      validateCustomDecorators: true,
     }),
   );
 

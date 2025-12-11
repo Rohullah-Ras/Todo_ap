@@ -82,12 +82,14 @@ export class TasksService {
   ): Promise<TaskResponse> {
     const task = await this.taskRepo.findOne({
       where: { id },
-      relations: ['list', 'status'],
+      relations: ['status'],
     });
 
     if (!task) {
       throw new NotFoundException(`Task #${id} not found`);
     }
+
+    console.log('UPDATE DTO:', updateTaskDto); // DEBUG: see what arrives
 
     if (updateTaskDto.title !== undefined) {
       task.title = updateTaskDto.title;
@@ -98,6 +100,12 @@ export class TasksService {
     }
 
     if (updateTaskDto.listId !== undefined) {
+      console.log(
+        'Updating listId from',
+        task.listId,
+        'to',
+        updateTaskDto.listId,
+      );
       task.listId = updateTaskDto.listId;
     }
 
@@ -130,6 +138,8 @@ export class TasksService {
     if (!full) {
       throw new NotFoundException(`Task #${saved.id} not found after update`);
     }
+
+    console.log('After update, listId in DB =', full.listId); // DEBUG
 
     return full.toResponseObject();
   }

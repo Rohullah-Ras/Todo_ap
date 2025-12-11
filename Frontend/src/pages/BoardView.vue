@@ -491,6 +491,17 @@ async function loadBoard() {
       const listKey =
         t.list?.key ?? listsById.value[t.listId]?.key ?? 'todo'
 
+      console.log(
+        'Place task',
+        enhanced.id,
+        'title:',
+        enhanced.title,
+        'listId:',
+        t.listId,
+        '=> listKey:',
+        listKey,
+      )
+
       if (!columns.value[listKey]) columns.value[listKey] = []
       columns.value[listKey].push(enhanced)
     }
@@ -684,6 +695,23 @@ async function onDragEnd(evt) {
     return
   }
 
+
+  const rawId = movedTask.id
+  const taskId = Number(rawId)
+
+  console.log('movedTask.id RAW:', rawId, '=> Number:', taskId)
+
+  if (!rawId && rawId !== 0) {
+    console.warn('Task has no id, cannot PATCH', movedTask)
+    return
+  }
+
+  if (Number.isNaN(taskId)) {
+    console.warn('Task id is not a valid number, cannot PATCH', rawId)
+    return
+  }
+
+
   const payload = {
     listId: list.id,
     isDone: movedTask.isDone,
@@ -692,7 +720,7 @@ async function onDragEnd(evt) {
   console.log('PATCH move payload', payload)
 
   try {
-    await axios.patch(`${TASKS_URL}/${movedTask.id}`, payload)
+    await axios.patch(`${TASKS_URL}/${taskId}`, payload)
     // Optional: could read response and sync, but not required for listId.
   } catch (err) {
     console.error('Error moving task', err)
