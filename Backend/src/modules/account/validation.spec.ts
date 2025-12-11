@@ -14,7 +14,7 @@ class AccountDto {
 class OptionalDto {
   @IsOptional()
   @IsInt()
-  webwinkelId?: number;
+  declare webwinkelId?: number;
 }
 
 describe('ValidationPipe options – behaviour check', () => {
@@ -93,11 +93,40 @@ describe('ValidationPipe options – behaviour check', () => {
       { type: 'body', metatype: OptionalDto, data: '' },
     );
 
+    // for (const key of Object.keys(result)) {
+    //   if (result[key] === undefined) {
+    //     delete result[key];
+    //   }
+    // }
+
     // key bestaat NIET
     expect(Object.prototype.hasOwnProperty.call(result, 'webwinkelId')).toBe(
       false,
     );
     expect(result.webwinkelId).toBeUndefined();
+  });
+
+  it(' transform:true  als webwnkelId is verzonde, verandert naar nummer ', async () => {
+    const pipe = new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      transformOptions: {
+        exposeUnsetFields: false,
+      },
+    });
+
+    const result = await pipe.transform(
+      { webwinkelId: '123' },
+      { type: 'body', metatype: OptionalDto, data: '' },
+    );
+
+    expect(result).toBeInstanceOf(OptionalDto);
+    expect(result.webwinkelId).toBe(123);
+    expect(typeof result.webwinkelId).toBe('number');
+
+    expect(Object.prototype.hasOwnProperty.call(result, 'webwinkelId')).toBe(
+      true,
+    );
   });
 
   it('skipMissingProperties:true: mist verplichte property maar geeft geen fout', async () => {
