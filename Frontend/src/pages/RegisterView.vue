@@ -56,6 +56,7 @@
 import {ref} from 'vue';
 import {useRouter} from 'vue-router';
 
+
 const router = useRouter();
 
 const email = ref('');
@@ -76,19 +77,8 @@ const matchPassword = (v: string) =>
   v === password.value || 'Passwords must match';
 
 const onSubmit = async () => {
-  if (!isValid.value) return;
-  loading.value = true;
+  await register(email.value, password.value)
+  router.push('/board')
 
-  try {
-    // TODO: replace with real backend call later (e.g. /auth/register)
-    snackbarMessage.value = 'Registered (fake). You can login now.';
-    snackbar.value = true;
-    router.push('/login');
-  } catch (e) {
-    snackbarMessage.value = 'Register failed';
-    snackbar.value = true;
-  } finally {
-    loading.value = false;
-  }
 };
 </script>

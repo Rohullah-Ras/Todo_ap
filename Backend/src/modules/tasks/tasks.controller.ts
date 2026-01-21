@@ -14,8 +14,8 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { TaskResponse } from './dto/task-response.dto';
 
-@ApiTags('tasks') // groups endpoints in Swagger
-@Controller('tasks') // /api/tasks
+@ApiTags('tasks')
+@Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
@@ -33,7 +33,6 @@ export class TasksController {
     return this.tasksService.findByList(listId);
   }
 
-  //  ADDED @Get()
   @Get()
   @ApiOperation({ summary: 'Get all tasks' })
   @ApiResponse({ status: 200, type: [TaskResponse] })
@@ -41,27 +40,41 @@ export class TasksController {
     return this.tasksService.findAll();
   }
 
+  // TRASH
+  @Get('trash')
+  trash() {
+    return this.tasksService.trash();
+  }
+
+  // RESTORE
+  @Patch(':id/restore')
+  restore(@Param('id', ParseIntPipe) id: number) {
+    return this.tasksService.restore(id);
+  }
+
+  // PERMANENT DELETE (2e delete)
+  @Delete(':id/permanent')
+  removePermanent(@Param('id', ParseIntPipe) id: number) {
+    return this.tasksService.removePermanent(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a task by ID' })
   @ApiResponse({ status: 200, type: TaskResponse })
-  @ApiResponse({ status: 404, description: 'Task not found' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.tasksService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a task (title, description, list, status)' })
+  @ApiOperation({ summary: 'Update a task' })
   @ApiResponse({ status: 200, type: TaskResponse })
-  @ApiResponse({ status: 404, description: 'Task not found' })
-  // use dto instead of non-existing updateTaskDto
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTaskDto) {
-    return this.tasksService.update(+id, dto);
+    return this.tasksService.update(id, dto);
   }
 
+  // 1e delete => soft delete
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a task' })
-  @ApiResponse({ status: 200, description: 'Task removed' })
-  @ApiResponse({ status: 404, description: 'Task not found' })
+  @ApiOperation({ summary: 'Delete a task (move to trash)' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.tasksService.remove(id);
   }

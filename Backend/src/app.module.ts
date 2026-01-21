@@ -7,8 +7,12 @@ import { List } from './modules/list/list.entity';
 import { Status } from './modules/status/status.entity';
 import { StatusesModule } from './modules/status/statuses.module';
 import { AccountModule } from './modules/account/account.module';
-
 import * as dotenv from 'dotenv';
+import { AuthModule } from './modules/auth/auth.module';
+import { User } from './modules/users/user.entity';
+import { UsersModule } from './modules/users/users.module';
+import { TaskStatus } from './modules/status/task-status.entity';
+import { Space } from './modules/spaces/space.entity';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -19,12 +23,12 @@ dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST || 'localhost',
-      port: +(process.env.DB_PORT || 3001),
+      port: +(process.env.DB_PORT || 5432),
       username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'Welkom01!',
+      password: process.env.DB_PASSWORD || 'password!',
       database:
         process.env.DB_DATABASE || (isTest ? 'Todo_app_test' : 'Todo_app'),
-      entities: [Task, List, Status],
+      entities: [Task, List, Status, TaskStatus, Space, User],
       synchronize: isTest || process.env.NODE_ENV === 'development',
       dropSchema: isTest,
 
@@ -32,6 +36,14 @@ dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
         max: 5,
       },
     }),
+    TasksModule,
+    ListsModule,
+    StatusesModule,
+    AccountModule,
+
+    UsersModule,
+    AuthModule,
+
     TasksModule,
     ListsModule,
     StatusesModule,

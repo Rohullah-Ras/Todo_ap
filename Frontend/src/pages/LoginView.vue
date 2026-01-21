@@ -47,6 +47,7 @@
 <script lang="ts" setup>
 import {ref} from 'vue';
 import {useRouter} from 'vue-router';
+import {login} from '../api/auth'
 
 const router = useRouter();
 
@@ -63,25 +64,7 @@ const rules = {
 };
 
 const onSubmit = async () => {
-  if (!isValid.value) return;
-  loading.value = true;
-
-  try {
-    // TODO: replace with real backend call later (e.g. /auth/login)
-    if (email.value && password.value) {
-      localStorage.setItem('fakeToken', 'dummy-token');
-      snackbarMessage.value = 'Login successful!';
-      snackbar.value = true;
-      router.push('/board');
-    } else {
-      snackbarMessage.value = 'Invalid credentials';
-      snackbar.value = true;
-    }
-  } catch (e) {
-    snackbarMessage.value = 'Login failed';
-    snackbar.value = true;
-  } finally {
-    loading.value = false;
-  }
+  await login(email.value, password.value)
+  router.push('/board')
 };
 </script>

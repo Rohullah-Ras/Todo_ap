@@ -39,14 +39,28 @@ const router = createRouter({
   routes,
 })
 
-// Simple auth guard using fakeToken
+// // Simple auth guard using fakeToken
+// router.beforeEach((to, from, next) => {
+//   if (to.meta.requiresAuth) {
+//     const token = localStorage.getItem('fakeToken')
+//     if (!token) return next('/login')
+//   }
+//   next()
+// })
+
+// // Auth guard using JWT
 router.beforeEach((to, from, next) => {
-  if (to.meta.requiresAuth) {
-    const token = localStorage.getItem('fakeToken')
-    if (!token) return next('/login')
+  const token = localStorage.getItem('access_token')
+
+  if (to.meta.requiresAuth && !token) return next('/login')
+
+  if ((to.path === '/login' || to.path === '/register') && token) {
+    return next('/board')
   }
+
   next()
 })
+
 
 // Optional: Vuetify dynamic import workaround
 router.onError((err, to) => {

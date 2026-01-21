@@ -1,14 +1,16 @@
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { List } from '../list/list.entity';
-import { Status } from '../status/status.entity';
+import { TaskStatus } from '../status/task-status.entity';
 import { TaskResponse } from './dto/task-response.dto';
 
 @Entity('tasks')
@@ -28,6 +30,9 @@ export class Task {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @DeleteDateColumn()
+  deletedAt: Date | null;
+
   @Column({ default: false })
   isDone: boolean;
 
@@ -38,12 +43,8 @@ export class Task {
   @JoinColumn({ name: 'listId' })
   list: List;
 
-  @Column({ nullable: true })
-  statusId: number | null;
-
-  @ManyToOne(() => Status, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'statusId' })
-  status: Status | null;
+  @OneToOne(() => TaskStatus, (ts) => ts.task)
+  taskStatus: TaskStatus;
 
   toResponseObject(): TaskResponse {
     return {
@@ -54,9 +55,9 @@ export class Task {
       updatedAt: this.updatedAt,
       isDone: this.isDone,
       listId: this.listId,
-      statusId: this.statusId ?? null,
+      statusId: this.taskStatus?.statusId ?? null,
       listName: this.list?.name,
-      statusName: this.status?.name ?? null,
+      statusName: this.taskStatus?.status?.name ?? null,
     };
   }
 }
