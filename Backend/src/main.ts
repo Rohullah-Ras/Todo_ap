@@ -3,7 +3,7 @@ import AppModule from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import 'reflect-metadata';
-import {AppValidationPipe} from "./pipes/app-validation.pipe";
+import { AppValidationPipe } from './pipes/app-validation.pipe';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,8 +15,7 @@ async function bootstrap() {
   });
 
   app.useGlobalPipes(
-
-      new AppValidationPipe()
+    new AppValidationPipe(),
     new ValidationPipe({
       transform: true,
       whitelist: true,
@@ -25,23 +24,20 @@ async function bootstrap() {
       stopAtFirstError: false,
 
       // foutdata niet te “leaky”
-      validationError: {
-        target: false, // stuur DTO object zelf niet terug in error
-        value: true,
-      },
+      // validationError: {
+      //   target: false, // stuur DTO object zelf niet terug in error
+      //   value: true,
+      // },
       transformOptions: {
         enableImplicitConversion: true,
         exposeUnsetFields: false,
       },
       validateCustomDecorators: true,
 
-        validationError: {
-            target: false,               // Don't expose the original object
-            value: false,                // Don't expose the raw value
-        },
-
-
-
+      validationError: {
+        target: false, // Don't expose the original object
+        value: false, // Don't expose the raw value
+      },
     }),
   );
 
