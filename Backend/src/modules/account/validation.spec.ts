@@ -1,6 +1,7 @@
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { IsInt, IsOptional, IsString, MinLength } from 'class-validator';
 import { describe, expect, it } from 'vitest';
+import { Transform } from 'class-transformer';
 
 class AccountDto {
   @IsInt()
@@ -13,6 +14,7 @@ class AccountDto {
 
 class OptionalDto {
   @IsOptional()
+  @Transform((params) => Number.parseInt(params.value))
   @IsInt()
   declare webwinkelId?: number;
 }
@@ -106,7 +108,7 @@ describe('ValidationPipe options – behaviour check', () => {
     expect(result.webwinkelId).toBeUndefined();
   });
 
-  it(' transform:true  als webwnkelId is verzonde, verandert naar nummer ', async () => {
+  it(' transform:true  als webwinkelId is verzonden, verandert naar nummer ', async () => {
     const pipe = new ValidationPipe({
       transform: true,
       whitelist: true,
