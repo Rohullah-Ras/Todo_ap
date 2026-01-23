@@ -76,9 +76,15 @@ const rules = {
 const matchPassword = (v: string) =>
   v === password.value || 'Passwords must match';
 
-const onSubmit = async () => {
-  await register(email.value, password.value)
-  router.push('/board')
 
+const onSubmit = async () => {
+  await auth.register({
+    email: email.value,
+    password: password.value,
+    fullName: fullName.value,
+  });
+
+  router.push('/dashboard');
 };
+
 </script>

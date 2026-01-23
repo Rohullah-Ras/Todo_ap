@@ -13,6 +13,7 @@ import { User } from './modules/users/user.entity';
 import { UsersModule } from './modules/users/users.module';
 import { TaskStatus } from './modules/status/task-status.entity';
 import { Space } from './modules/spaces/space.entity';
+import { SpacesModule } from './modules/spaces/spaces.module';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -31,6 +32,7 @@ dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
       entities: [Task, List, Status, TaskStatus, Space, User],
       synchronize: isTest || process.env.NODE_ENV === 'development',
       dropSchema: isTest,
+      logging: ['error', 'schema'],
 
       extra: {
         max: 5,
@@ -48,6 +50,7 @@ dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
     ListsModule,
     StatusesModule,
     AccountModule,
+    SpacesModule,
   ],
 })
 class AppModule {}

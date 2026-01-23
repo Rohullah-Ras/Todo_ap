@@ -4,12 +4,15 @@ import { Repository } from 'typeorm';
 import { List } from './list.entity';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
+import { Space } from '../spaces/space.entity';
 
 @Injectable()
 export class ListsService {
   constructor(
     @InjectRepository(List)
     private readonly listRepo: Repository<List>,
+    @InjectRepository(Space)
+    private readonly spaceRepo: Repository<Space>,
   ) {}
 
   // GET /lists
@@ -30,14 +33,25 @@ export class ListsService {
 
   // POST /lists
   async create(dto: CreateListDto): Promise<List> {
-    const key = dto.key || this.slugify(dto.name); // based on name
+    const space = await this.spaceRepo.findOne({ where: { id: dto.spaceId } });
+    if (!space) {
+      throw new NotFoundException(`Space #${dto.spaceId} not found`);
+    }
 
     const list = this.listRepo.create({
       name: dto.name,
-      key,
+      key: dto.key ?? null, // null => BeforeInsert maakt random key
+      spaceId: dto.spaceId,
     });
 
     return this.listRepo.save(list);
+  }
+
+  findBySpace(spaceId: number): Promise<List[]> {
+    return this.listRepo.find({
+      where: { spaceId },
+      order: { id: 'ASC' },
+    });
   }
 
   // PATCH /lists/:id

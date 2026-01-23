@@ -43,14 +43,14 @@ export class CreateTaskDto {
   @IsInt({ message: 'listId must be an integer' })
   listId: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 2,
     description: 'ID of status (todo, in-progress, done)',
   })
   @Type(() => Number)
   @IsInt()
   @IsOptional()
-  statusId: number;
+  statusId?: number | null;
 
   @IsOptional()
   @IsBoolean()

@@ -1,16 +1,8 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateTaskDto } from './create-task.dto';
-import {
-  IsBoolean,
-  IsInt,
-  IsOptional,
-  IsString,
-  Matches,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
-import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsInt, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateTaskDto extends PartialType(CreateTaskDto) {
   @ApiPropertyOptional({
@@ -18,26 +10,22 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
     description: 'Mark task as done/undone',
   })
   @IsOptional()
-  @IsString()
-  @MinLength(3)
-  @MaxLength(100)
-  @Matches(/[A-Za-z]/)
-  title?: string;
+  @IsBoolean()
+  isDone?: boolean;
 
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  description?: string;
-
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Move task to another list',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   listId?: number;
 
-  @IsOptional()
-  @IsBoolean()
-  isDone?: boolean;
-
+  @ApiPropertyOptional({
+    example: 2,
+    description: 'Change status (todo/in-progress/done)',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

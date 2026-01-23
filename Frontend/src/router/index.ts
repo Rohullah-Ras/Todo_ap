@@ -1,51 +1,36 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-
-import AuthLayout from '@/layouts/AuthLayout.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-
-import SignIn from '@/pages/auth/SignIn.vue';
-import SignUp from '@/pages/auth/SignUp.vue';
-import Board from '@/pages/Board.vue';
+import {createRouter, createWebHistory} from 'vue-router';
+import {useAuthStore} from '@/stores/auth';
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: '/auth',
-      component: AuthLayout,
-      children: [
-        { path: 'sign-in', component: SignIn },
-        { path: 'sign-up', component: SignUp },
-      ],
+      path: '/login',
+      component: () => import('@/pages/LoginView.vue'),
+      meta: {guest: true},
     },
     {
-      path: '/',
-      component: AppLayout,
-      meta: { requiresAuth: true },
-      children: [
-        { path: '', redirect: '/board' },
-        { path: 'board', component: Board },
-      ],
+      path: '/register',
+      component: () => import('@/pages/RegisterView.vue'),
+      meta: {guest: true},
     },
-    { path: '/:pathMatch(.*)*', redirect: '/board' },
+    {
+      path: '/dashboard',
+      component: () => import('@/pages/DashBoard.vue'),
+      meta: {requiresAuth: true},
+    },
   ],
 });
 
-router.beforeEach(async (to) => {
+router.beforeEach((to) => {
   const auth = useAuthStore();
 
-  // Zorg dat we user status kennen voordat we beschermen
-  if (auth.user === null && to.meta.requiresAuth) {
-    await auth.me();
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return '/login';
   }
 
-  if (to.meta.requiresAuth && !auth.isAuthed) {
-    return '/auth/sign-in';
-  }
-
-  if (to.path.startsWith('/auth') && auth.isAuthed) {
-    return '/board';
+  if (to.meta.guest && auth.isAuthenticated) {
+    return '/dashboard';
   }
 });
 

@@ -47,24 +47,23 @@
 <script lang="ts" setup>
 import {ref} from 'vue';
 import {useRouter} from 'vue-router';
-import {login} from '../api/auth'
-
-const router = useRouter();
+import {useAuthStore} from '@/stores/auth';
 
 const email = ref('');
 const password = ref('');
-const isValid = ref(false);
-const loading = ref(false);
-const snackbar = ref(false);
-const snackbarMessage = ref('');
+const auth = useAuthStore();
+const router = useRouter();
 
-const rules = {
-  required: (v: string) => !!v || 'Required',
-  email: (v: string) => /.+@.+\..+/.test(v) || 'Must be a valid email',
-};
+const submit = async () => {
+  try {
+    await auth.login({
+      email: email.value,
+      password: password.value,
+    });
 
-const onSubmit = async () => {
-  await login(email.value, password.value)
-  router.push('/board')
+    router.push('/dashboard');
+  } catch (err) {
+    alert('Login failed');
+  }
 };
 </script>

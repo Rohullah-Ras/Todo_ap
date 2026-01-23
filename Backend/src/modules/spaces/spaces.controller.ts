@@ -9,11 +9,11 @@ import {
   Post,
 } from '@nestjs/common';
 import { SpacesService } from './spaces.service';
+import { CreateSpaceDto } from './dto/create-space.dto';
 
 @Controller('spaces')
 export class SpacesController {
-  // tijdelijk: userId hardcoded totdat we auth guard erop zetten
-  private userId = 1;
+  private userId = 1; // tijdelijk
 
   constructor(private readonly spacesService: SpacesService) {}
 
@@ -28,8 +28,8 @@ export class SpacesController {
   }
 
   @Post()
-  create(@Body() body: { name: string }) {
-    return this.spacesService.create(this.userId, body.name);
+  create(@Body() dto: CreateSpaceDto) {
+    return this.spacesService.create(this.userId, dto.name);
   }
 
   @Patch(':id/restore')

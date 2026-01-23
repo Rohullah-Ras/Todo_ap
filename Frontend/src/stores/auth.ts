@@ -1,56 +1,37 @@
-import { defineStore } from 'pinia';
-import { http } from '@/api/http';
-
-type User = {
-  id: number;
-  username: string;
-  email: string;
-  fullName?: string;
-};
+import {defineStore} from 'pinia';
+import {http} from '@/api/http';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null as User | null,
-    loading: false,
+    token: localStorage.getItem('access_token') as string | null,
+    user: null as any,
   }),
+
   getters: {
-    isAuthed: (s) => !!s.user,
+    isAuthenticated: (state) => !!state.token,
   },
+
   actions: {
-    async me() {
-      this.loading = true;
-      try {
-        const res = await http.get('/auth/me');
-        this.user = res.data;
-      } catch {
-        this.user = null;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async signIn(payload: { email: string; password: string }) {
-      // Backend zet cookie (access/refresh) httpOnly
-      await http.post('/auth/sign-in', payload);
-      await this.me();
-    },
-
-    async signUp(payload: {
-      fullName: string;
-      username: string;
+    async register(payload: {
       email: string;
       password: string;
+      fullName?: string;
     }) {
-      await http.post('/auth/sign-up', payload);
-      await this.me();
+      const res = await http.post('/auth/register', payload);
+      this.token = res.data.access_token;
+      localStorage.setItem('access_token', this.token);
     },
 
-    async logout() {
-      try {
-        await http.post('/auth/logout');
-      } finally {
-        this.user = null;
-      }
+    async login(payload: { email: string; password: string }) {
+      const res = await http.post('/auth/login', payload);
+      this.token = res.data.access_token;
+      localStorage.setItem('access_token', this.token);
+    },
+
+    logout() {
+      this.token = null;
+      this.user = null;
+      localStorage.removeItem('access_token');
     },
   },
 });

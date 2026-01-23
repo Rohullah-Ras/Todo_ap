@@ -7,7 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Task } from './task.entity';
-import { List } from '../list/list.entity';
+import { List } from '../list/list.entity'; // <-- pad checken
 import { Status } from '../status/status.entity';
 import { TaskStatus } from '../status/task-status.entity';
 
@@ -29,10 +29,11 @@ export class TasksService {
   ) {}
 
   async create(dto: CreateTaskDto): Promise<TaskResponse> {
-    // check list bestaat
+    // list must exist
     const list = await this.listRepo.findOne({ where: { id: dto.listId } });
     if (!list) throw new NotFoundException(`List #${dto.listId} not found`);
 
+    // create task
     const task = this.taskRepo.create({
       title: dto.title,
       description: dto.description,
@@ -42,14 +43,14 @@ export class TasksService {
 
     const savedTask = await this.taskRepo.save(task);
 
-    // statusId: dto.statusId of default todo
+    // choose statusId
     let statusId = dto.statusId ?? null;
-    if (!statusId) statusId = await this.getTodoStatusId();
+    if (!statusId) statusId = await this.getDefaultTodoStatusId();
 
-    // check status bestaat
+    // status must exist
     await this.statusRepo.findOneByOrFail({ id: statusId });
 
-    // maak TaskStatus record (1 per task)
+    // create task status (1 per task)
     await this.taskStatusRepo.save(
       this.taskStatusRepo.create({
         taskId: savedTask.id,
@@ -57,14 +58,13 @@ export class TasksService {
       }),
     );
 
-    // reload relations voor response
+    // reload full for response
     const full = await this.taskRepo.findOne({
       where: { id: savedTask.id },
       relations: ['list', 'taskStatus', 'taskStatus.status'],
     });
 
-    if (!full)
-      throw new NotFoundException(`Task #${savedTask.id} not found after save`);
+    if (!full) throw new NotFoundException(`Task #${savedTask.id} not found`);
 
     return full.toResponseObject();
   }
@@ -95,7 +95,6 @@ export class TasksService {
     });
 
     if (!task) throw new NotFoundException(`Task #${id} not found`);
-
     return task.toResponseObject();
   }
 
@@ -119,52 +118,37 @@ export class TasksService {
 
     await this.taskRepo.save(task);
 
-    // status update
+    // update status (TaskStatus)
     if (dto.statusId !== undefined) {
-      if (dto.statusId === null) {
-        // als je null toelaat: zet naar todo (of soft delete taskStatus)
-        const todoId = await this.getTodoStatusId();
-        dto.statusId = todoId;
-      }
+      const statusId = dto.statusId ?? (await this.getDefaultTodoStatusId());
 
-      // check status bestaat
-      await this.statusRepo.findOneByOrFail({ id: dto.statusId });
+      await this.statusRepo.findOneByOrFail({ id: statusId });
 
-      // haal taskStatus (met deleted)
       let ts = await this.taskStatusRepo.findOne({
         where: { taskId: task.id },
         withDeleted: true,
       });
 
       if (!ts) {
-        ts = this.taskStatusRepo.create({
-          taskId: task.id,
-          statusId: dto.statusId,
-        });
+        ts = this.taskStatusRepo.create({ taskId: task.id, statusId });
       } else {
-        // als ts soft-deleted was, restore hem eerst
-        if (ts.deletedAt) {
-          await this.taskStatusRepo.restore(ts.id);
-        }
-        ts.statusId = dto.statusId;
+        if (ts.deletedAt) await this.taskStatusRepo.restore(ts.id);
+        ts.statusId = statusId;
       }
 
       await this.taskStatusRepo.save(ts);
     }
 
-    // reload relations voor response
     const full = await this.taskRepo.findOne({
       where: { id: task.id },
       relations: ['list', 'taskStatus', 'taskStatus.status'],
     });
 
-    if (!full)
-      throw new NotFoundException(`Task #${task.id} not found after update`);
-
+    if (!full) throw new NotFoundException(`Task #${task.id} not found`);
     return full.toResponseObject();
   }
 
-  // 1e delete = soft delete (naar trash)
+  // 1e delete => soft delete (trash)
   async remove(id: number): Promise<{ message: string }> {
     const task = await this.taskRepo.findOne({ where: { id } });
     if (!task) throw new NotFoundException(`Task #${id} not found`);
@@ -177,26 +161,7 @@ export class TasksService {
     return { message: `Task #${id} moved to trash` };
   }
 
-  // 2e delete = permanent
-  async removePermanent(id: number): Promise<{ message: string }> {
-    const task = await this.taskRepo.findOne({
-      where: { id },
-      withDeleted: true,
-    });
-    if (!task) throw new NotFoundException(`Task #${id} not found`);
-
-    if (!task.deletedAt) {
-      return {
-        message: `Task #${id} must be in trash before permanent delete`,
-      };
-    }
-
-    // hard delete => TaskStatus gaat mee door CASCADE (taskId FK)
-    await this.taskRepo.delete(id);
-
-    return { message: `Task #${id} permanently deleted` };
-  }
-
+  // list deleted tasks
   async trash(): Promise<TaskResponse[]> {
     const tasks = await this.taskRepo.find({
       withDeleted: true,
@@ -207,11 +172,13 @@ export class TasksService {
     return tasks.filter((t) => t.deletedAt).map((t) => t.toResponseObject());
   }
 
+  // restore from trash
   async restore(id: number): Promise<{ message: string }> {
     const task = await this.taskRepo.findOne({
       where: { id },
       withDeleted: true,
     });
+
     if (!task) throw new NotFoundException(`Task #${id} not found`);
 
     await this.taskRepo.restore(id);
@@ -225,12 +192,29 @@ export class TasksService {
     return { message: `Task #${id} restored` };
   }
 
-  private async getTodoStatusId(): Promise<number> {
-    // jij gebruikt 'in-progress' of 'inprogress'? kies één in je DB
+  // 2e delete => hard delete
+  async removePermanent(id: number): Promise<{ message: string }> {
+    const task = await this.taskRepo.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+
+    if (!task) throw new NotFoundException(`Task #${id} not found`);
+    if (!task.deletedAt) {
+      return {
+        message: `Task #${id} must be in trash before permanent delete`,
+      };
+    }
+
+    await this.taskRepo.delete(id); // TaskStatus cascades via FK on taskId
+    return { message: `Task #${id} permanently deleted` };
+  }
+
+  private async getDefaultTodoStatusId(): Promise<number> {
     const todo = await this.statusRepo.findOne({ where: { name: 'todo' } });
     if (!todo) {
       throw new BadRequestException(
-        `Status 'todo' bestaat niet. Voeg statuses toe in DB: todo, in-progress, done.`,
+        `Status 'todo' not found. Seed statuses table with: todo, in-progress, done.`,
       );
     }
     return todo.id;

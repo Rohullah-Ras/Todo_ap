@@ -21,6 +21,11 @@ export class ListsController {
     return this.listsService.findAll();
   }
 
+  @Get('space/:spaceId')
+  findBySpace(@Param('spaceId', ParseIntPipe) spaceId: number) {
+    return this.listsService.findBySpace(spaceId);
+  }
+
   @Post()
   create(@Body() dto: CreateListDto) {
     return this.listsService.create(dto);
