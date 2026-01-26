@@ -1,36 +1,29 @@
-// src/router/index.js
 import {createRouter, createWebHistory} from 'vue-router'
 
 import LoginView from '../pages/LoginView.vue'
 import RegisterView from '../pages/RegisterView.vue'
+import DashBoard from '../pages/DashBoard.vue'
 import BoardView from '../pages/BoardView.vue'
-import ValidationPlayground from '../pages/ValidationPlayground.vue'
 
 const routes = [
+  {path: '/', redirect: '/login'},
+
+  {path: '/login', name: 'Login', component: LoginView},
+  {path: '/register', name: 'Register', component: RegisterView},
+
   {
-    path: '/',
-    redirect: '/login',
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: DashBoard,
+    meta: {requiresAuth: true},
   },
+
   {
-    path: '/login',
-    name: 'Login',
-    component: LoginView,
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: RegisterView,
-  },
-  {
-    path: '/board',
+    path: '/board/:spaceId',
     name: 'Board',
     component: BoardView,
     meta: {requiresAuth: true},
-  },
-  {
-    path: '/validation',
-    name: 'Validation',
-    component: ValidationPlayground,
+    props: true,
   },
 ]
 
@@ -39,46 +32,16 @@ const router = createRouter({
   routes,
 })
 
-// // Simple auth guard using fakeToken
-// router.beforeEach((to, from, next) => {
-//   if (to.meta.requiresAuth) {
-//     const token = localStorage.getItem('fakeToken')
-//     if (!token) return next('/login')
-//   }
-//   next()
-// })
-
-// // Auth guard using JWT
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('access_token')
 
   if (to.meta.requiresAuth && !token) return next('/login')
 
   if ((to.path === '/login' || to.path === '/register') && token) {
-    return next('/board')
+    return next('/dashboard')
   }
 
   next()
-})
-
-
-// Optional: Vuetify dynamic import workaround
-router.onError((err, to) => {
-  if (err?.message?.includes?.('Failed to fetch dynamically imported module')) {
-    if (localStorage.getItem('vuetify:dynamic-reload')) {
-      console.error('Dynamic import error, reloading page did not fix it', err)
-    } else {
-      console.log('Reloading page to fix dynamic import error')
-      localStorage.setItem('vuetify:dynamic-reload', 'true')
-      location.assign(to.fullPath)
-    }
-  } else {
-    console.error(err)
-  }
-})
-
-router.isReady().then(() => {
-  localStorage.removeItem('vuetify:dynamic-reload')
 })
 
 export default router

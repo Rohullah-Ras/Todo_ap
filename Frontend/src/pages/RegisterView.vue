@@ -55,12 +55,14 @@
 <script lang="ts" setup>
 import {ref} from 'vue';
 import {useRouter} from 'vue-router';
+import {api} from '@/api/http' // of jouw axios instance pad
 
 
 const router = useRouter();
 
 const email = ref('');
 const password = ref('');
+const fullName = ref('');
 const confirmPassword = ref('');
 const isValid = ref(false);
 const loading = ref(false);
@@ -77,14 +79,16 @@ const matchPassword = (v: string) =>
   v === password.value || 'Passwords must match';
 
 
-const onSubmit = async () => {
-  await auth.register({
+const submit = async () => {
+  const res = await api.post('/auth/register', {
     email: email.value,
     password: password.value,
     fullName: fullName.value,
-  });
+  })
 
-  router.push('/dashboard');
-};
+  localStorage.setItem('access_token', res.data.access_token)
+  router.push('/dashboard')
+}
+
 
 </script>

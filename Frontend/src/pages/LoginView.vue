@@ -48,6 +48,7 @@
 import {ref} from 'vue';
 import {useRouter} from 'vue-router';
 import {useAuthStore} from '@/stores/auth';
+import {api} from '@/api/http' // of jouw axios instance pad
 
 const email = ref('');
 const password = ref('');
@@ -55,15 +56,13 @@ const auth = useAuthStore();
 const router = useRouter();
 
 const submit = async () => {
-  try {
-    await auth.login({
-      email: email.value,
-      password: password.value,
-    });
 
-    router.push('/dashboard');
-  } catch (err) {
-    alert('Login failed');
-  }
+  const res = await api.post('/auth/login', {
+    email: email.value,
+    password: password.value,
+  })
+
+  localStorage.setItem('access_token', res.data.access_token)
+  router.push('/dashboard')
 };
 </script>
