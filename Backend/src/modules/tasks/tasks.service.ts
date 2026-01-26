@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Task } from './task.entity';
 import { List } from '../list/list.entity'; // <-- pad checken
 import { Status } from '../status/status.entity';
@@ -12,10 +12,12 @@ import { TaskStatus } from '../status/task-status.entity';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskResponse } from './dto/task-response.dto';
+import { MoveTaskDto } from './dto/move-task.dto';
 
 @Injectable()
 export class TasksService {
   constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(Task)
     private readonly taskRepo: Repository<Task>,
     @InjectRepository(List)
@@ -31,16 +33,6 @@ export class TasksService {
     const list = await this.listRepo.findOne({ where: { id: dto.listId } });
     if (!list) throw new NotFoundException(`List #${dto.listId} not found`);
 
-    // create task
-    const task = this.taskRepo.create({
-      title: dto.title,
-      description: dto.description,
-      listId: dto.listId,
-      isDone: dto.isDone ?? false,
-    });
-
-    const savedTask = await this.taskRepo.save(task);
-
     // choose statusId
     let statusId = dto.statusId ?? null;
     if (!statusId) statusId = await this.getDefaultTodoStatusId();
@@ -48,7 +40,31 @@ export class TasksService {
     // status must exist
     await this.statusRepo.findOneByOrFail({ id: statusId });
 
-    // create task status (1 per task)
+    // next position in this column (listId + statusId)
+    const { max } = await this.taskRepo
+      .createQueryBuilder('t')
+      .leftJoin('t.taskStatus', 'ts')
+      .select('COALESCE(MAX(t.position), -1)', 'max')
+      .where('t.listId = :listId', { listId: dto.listId })
+      .andWhere('t.deletedAt IS NULL')
+      .andWhere('ts.deletedAt IS NULL')
+      .andWhere('ts.statusId = :statusId', { statusId })
+      .getRawOne<{ max: string }>();
+
+    const nextPos = Number(max) + 1;
+
+    // create task
+    const task = this.taskRepo.create({
+      title: dto.title,
+      description: dto.description,
+      listId: dto.listId,
+      isDone: dto.isDone ?? false,
+      position: nextPos,
+    });
+
+    const savedTask = await this.taskRepo.save(task);
+
+    // create task status
     await this.taskStatusRepo.save(
       this.taskStatusRepo.create({
         taskId: savedTask.id,
@@ -144,6 +160,97 @@ export class TasksService {
 
     if (!full) throw new NotFoundException(`Task #${task.id} not found`);
     return full.toResponseObject();
+  }
+
+  async move(id: number, dto: MoveTaskDto) {
+    // validate target list/status exist
+    const list = await this.listRepo.findOne({ where: { id: dto.listId } });
+    if (!list) throw new NotFoundException(`List #${dto.listId} not found`);
+
+    await this.statusRepo.findOneByOrFail({ id: dto.statusId });
+
+    return this.dataSource.transaction(async (manager) => {
+      const taskRepo = manager.getRepository(Task);
+      const taskStatusRepo = manager.getRepository(TaskStatus);
+
+      const task = await taskRepo.findOne({
+        where: { id },
+        relations: ['taskStatus'],
+      });
+
+      if (!task) throw new NotFoundException(`Task #${id} not found`);
+      if (!task.taskStatus)
+        throw new NotFoundException(`TaskStatus for Task #${id} not found`);
+
+      const fromListId = task.listId;
+      const fromStatusId = task.taskStatus.statusId;
+      const fromPos = task.position;
+
+      const toListId = dto.listId;
+      const toStatusId = dto.statusId;
+      const toPos = Math.max(0, dto.position);
+
+      const sameColumn = fromListId === toListId && fromStatusId === toStatusId;
+
+      // 1) Close gap in source column
+      // decrement positions > fromPos
+      await taskRepo
+        .createQueryBuilder()
+        .update(Task)
+        .set({ position: () => `"position" - 1` })
+        .where(`"listId" = :listId`, { listId: fromListId })
+        .andWhere(`"deletedAt" IS NULL`)
+        .andWhere(`"position" > :fromPos`, { fromPos })
+        .andWhere(
+          `id IN (
+          SELECT t.id FROM tasks t
+          JOIN task_statuses ts ON ts."taskId" = t.id
+          WHERE ts."deletedAt" IS NULL AND ts."statusId" = :fromStatusId
+        )`,
+          { fromStatusId },
+        )
+        .execute();
+
+      // 2) Make room in target column
+      // increment positions >= toPos
+      await taskRepo
+        .createQueryBuilder()
+        .update(Task)
+        .set({ position: () => `"position" + 1` })
+        .where(`"listId" = :listId`, { listId: toListId })
+        .andWhere(`"deletedAt" IS NULL`)
+        .andWhere(`"position" >= :toPos`, { toPos })
+        .andWhere(
+          `id IN (
+          SELECT t.id FROM tasks t
+          JOIN task_statuses ts ON ts."taskId" = t.id
+          WHERE ts."deletedAt" IS NULL AND ts."statusId" = :toStatusId
+        )`,
+          { toStatusId },
+        )
+        .execute();
+
+      // 3) Update the moved task to new column + new position
+      task.listId = toListId;
+      task.position = toPos;
+
+      await taskRepo.save(task);
+
+      if (!sameColumn) {
+        task.taskStatus.statusId = toStatusId;
+        await taskStatusRepo.save(task.taskStatus);
+      }
+
+      const full = await taskRepo.findOne({
+        where: { id: task.id },
+        relations: ['list', 'taskStatus', 'taskStatus.status'],
+      });
+
+      if (!full)
+        throw new NotFoundException(`Task #${task.id} not found after move`);
+
+      return full.toResponseObject();
+    });
   }
 
   // 1e delete => soft delete (trash)

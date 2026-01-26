@@ -13,6 +13,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { TaskResponse } from './dto/task-response.dto';
+import { MoveTaskDto } from './dto/move-task.dto';
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -70,6 +71,11 @@ export class TasksController {
   @ApiResponse({ status: 200, type: TaskResponse })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTaskDto) {
     return this.tasksService.update(id, dto);
+  }
+
+  @Patch(':id/move')
+  move(@Param('id', ParseIntPipe) id: number, @Body() dto: MoveTaskDto) {
+    return this.tasksService.move(id, dto);
   }
 
   // 1e delete => soft delete
