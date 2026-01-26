@@ -36,6 +36,9 @@ export class Task {
   @Column({ default: false })
   isDone: boolean;
 
+  @Column({ type: 'int', default: 0 })
+  position: number;
+
   @Column()
   listId: number;
 

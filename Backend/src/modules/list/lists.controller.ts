@@ -40,4 +40,19 @@ export class ListsController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.listsService.remove(id);
   }
+
+  @Get('trash')
+  trash() {
+    return this.listsService.trash();
+  }
+
+  @Patch(':id/restore')
+  restore(@Param('id', ParseIntPipe) id: number) {
+    return this.listsService.restore(id);
+  }
+
+  @Delete(':id/permanent')
+  removePermanent(@Param('id', ParseIntPipe) id: number) {
+    return this.listsService.removePermanent(id);
+  }
 }

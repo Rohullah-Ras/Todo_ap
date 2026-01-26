@@ -52,7 +52,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
   await app.listen(3005, '0.0.0.0');
-  console.log(await app.getUrl());
+  (console.log(`http://localhost:3005/docs`), console.log(await app.getUrl()));
 }
 
 bootstrap();

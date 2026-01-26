@@ -5,12 +5,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
 import { Task } from './task.entity';
 import { List } from '../list/list.entity'; // <-- pad checken
 import { Status } from '../status/status.entity';
 import { TaskStatus } from '../status/task-status.entity';
-
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskResponse } from './dto/task-response.dto';

@@ -5,6 +5,7 @@ import { List } from './list.entity';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
 import { Space } from '../spaces/space.entity';
+import { Task } from '../tasks/task.entity';
 
 @Injectable()
 export class ListsService {
@@ -13,6 +14,8 @@ export class ListsService {
     private readonly listRepo: Repository<List>,
     @InjectRepository(Space)
     private readonly spaceRepo: Repository<Space>,
+    @InjectRepository(Task)
+    private readonly taskRepo: Repository<Task>,
   ) {}
 
   // GET /lists
@@ -75,10 +78,51 @@ export class ListsService {
   }
 
   // DELETE /lists/:id
-  async remove(id: number): Promise<{ message: string }> {
-    const list = await this.findOne(id);
-    await this.listRepo.remove(list);
-    return { message: `List #${id} removed` };
+  async remove(id: number) {
+    const list = await this.listRepo.findOne({ where: { id } });
+    if (!list) throw new NotFoundException(`List #${id} not found`);
+
+    // tasks + taskStatus mee naar trash
+    await this.taskRepo.softDelete({ listId: id });
+
+    await this.listRepo.softDelete(id);
+    return { message: `List #${id} moved to trash` };
+  }
+
+  async trash() {
+    return this.listRepo.find({
+      withDeleted: true,
+      where: { deletedAt: Not(IsNull()) },
+    });
+  }
+
+  async restore(id: number) {
+    const list = await this.listRepo.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+    if (!list) throw new NotFoundException(`List #${id} not found`);
+
+    await this.listRepo.restore(id);
+    await this.taskRepo.restore({ listId: id });
+
+    return { message: `List #${id} restored` };
+  }
+
+  async removePermanent(id: number) {
+    const list = await this.listRepo.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+
+    if (!list || !list.deletedAt) {
+      throw new BadRequestException('List must be in trash first');
+    }
+
+    await this.taskRepo.delete({ listId: id });
+    await this.listRepo.delete(id);
+
+    return { message: `List #${id} permanently deleted` };
   }
 
   // helper to generate "key" from the name
