@@ -86,7 +86,7 @@ export class TasksService {
   async findAll(): Promise<TaskResponse[]> {
     const tasks = await this.taskRepo.find({
       relations: ['list', 'taskStatus', 'taskStatus.status'],
-      order: { createdAt: 'DESC' },
+      order: { position: 'ASC', createdAt: 'ASC' },
     });
 
     return tasks.map((t) => t.toResponseObject());
@@ -96,7 +96,7 @@ export class TasksService {
     const tasks = await this.taskRepo.find({
       where: { listId },
       relations: ['list', 'taskStatus', 'taskStatus.status'],
-      order: { createdAt: 'DESC' },
+      order: { position: 'ASC', createdAt: 'ASC' },
     });
 
     return tasks.map((t) => t.toResponseObject());
