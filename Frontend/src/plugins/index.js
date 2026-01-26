@@ -6,7 +6,7 @@
 
 // Plugins
 import vuetify from './vuetify'
-import router from '@/router/index.ts.bak'
+import router from '@/router/index.js'
 
 export function registerPlugins(app) {
   app

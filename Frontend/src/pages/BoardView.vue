@@ -1,794 +1,627 @@
-<template>
-  <v-container class="py-8" max-width="1200">
-    <h1 class="text-h4 mb-6">Task Manager</h1>
-
-    <v-alert
-      v-if="error"
-      class="mb-4"
-      color="red-darken-3"
-      variant="tonal"
-    >
-      <pre style="white-space: pre-line; margin: 0;">{{ error }}</pre>
-    </v-alert>
-
-    <v-card class="mb-6">
-      <v-card-title>Add a new task</v-card-title>
-      <v-card-text>
-        <v-form @submit.prevent="addTask">
-          <v-text-field
-            v-model="newTaskTitle"
-            class="mb-3"
-            label="Title"
-            required
-          />
-
-          <v-textarea
-            v-model="newTaskDescription"
-            auto-grow
-            class="mb-3"
-            label="Description (optional)"
-          />
-
-          <!-- Status select from backend statuses -->
-          <v-select
-            v-model="newTaskStatusId"
-            :disabled="statuses.length === 0"
-            :items="statusOptions"
-            class="mb-3"
-            item-title="label"
-            item-value="value"
-            label="Status"
-          />
-
-          <v-select
-            v-model="addTaskListKey"
-            :disabled="!listsLoaded || listOptions.length === 0"
-            :items="listOptions"
-            class="mb-3"
-            item-title="label"
-            item-value="value"
-            label="List / Column"
-          />
-
-          <v-text-field
-            v-model="newListTitle"
-            class="mb-4"
-            hint="e.g. Vakantie"
-            label="Or create new list"
-            persistent-hint
-          />
-
-          <v-btn
-            :disabled="!newTaskTitle.trim() || !listsLoaded"
-            color="primary"
-            type="submit"
-          >
-            Add Task
-          </v-btn>
-        </v-form>
-      </v-card-text>
-    </v-card>
-
-    <div class="d-flex align-center justify-space-between mb-4">
-      <h2 class="text-h5">Board</h2>
-
-      <div class="d-flex align-center" style="gap: 12px;">
-        <v-select
-          v-model="selectedStatusFilter"
-          :items="statusFilterOptions"
-          density="compact"
-          hide-details
-          item-title="label"
-          item-value="value"
-          label="Show status"
-          style="max-width: 200px;"
-        />
-
-        <v-select
-          v-model="selectedListFilter"
-          :items="listFilterOptions"
-          density="compact"
-          hide-details
-          item-title="label"
-          item-value="value"
-          label="List"
-          style="max-width: 220px;"
-        />
-
-        <span v-if="loading" class="text-body-2">Loading...</span>
-      </div>
-    </div>
-
-    <v-card v-if="!hasAnyTasks && !loading">
-      <v-card-text class="text-medium-emphasis">
-        No tasks yet. Add one above ✏️
-      </v-card-text>
-    </v-card>
-
-    <v-row v-else dense>
-      <v-col
-        v-for="list in visibleLists"
-        :key="list.id"
-        cols="12"
-        md="4"
-      >
-        <div class="d-flex align-center justify-space-between mb-2">
-          <div class="d-flex align-center" style="gap: 6px;">
-            <h3
-              v-if="!list.editing"
-              class="text-h6 mb-0"
-            >
-              {{ list.title }}
-            </h3>
-
-            <v-text-field
-              v-else
-              v-model="list.editTitle"
-              density="compact"
-              hide-details
-              style="max-width: 170px;"
-            />
-          </div>
-
-          <div class="d-flex align-center" style="gap: 4px;">
-                <span class="text-caption text-medium-emphasis mr-1">
-                  {{ (columns[list.key] || []).length }} task(s)
-                </span>
-
-            <template v-if="!list.editing">
-              <v-btn
-                icon
-                size="x-small"
-                variant="text"
-                @click="startEditList(list)"
-              >
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-
-              <v-btn
-                icon
-                size="x-small"
-                variant="text"
-                @click="deleteList(list)"
-              >
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-            </template>
-
-            <template v-else>
-              <v-btn
-                icon
-                size="x-small"
-                variant="text"
-                @click="saveEditList(list)"
-              >
-                <v-icon>mdi-check</v-icon>
-              </v-btn>
-              <v-btn
-                icon
-                size="x-small"
-                variant="text"
-                @click="cancelEditList(list)"
-              >
-                <v-icon>mdi-close</v-icon>
-              </v-btn>
-            </template>
-          </div>
-        </div>
-
-        <draggable
-          v-model="columns[list.key]"
-          :data-list-key="list.key"
-          group="tasks"
-          item-key="id"
-          @end="onDragEnd"
-        >
-          <template #item="{ element: task }">
-            <div v-show="matchesStatusFilter(task)">
-              <v-card class="mb-2">
-                <v-card-text class="d-flex flex-column gap-2">
-                  <div class="d-flex align-start justify-space-between">
-                    <div class="d-flex align-start">
-                      <v-checkbox
-                        v-model="task.isDone"
-                        class="mr-2 mt-0 pt-0"
-                        hide-details
-                        @change="toggleDone(task)"
-                      />
-
-                      <div>
-                        <div v-if="task.editing">
-                          <v-text-field
-                            v-model="task.editTitle"
-                            class="mb-2"
-                            density="compact"
-                            label="Title"
-                          />
-                          <v-textarea
-                            v-model="task.editDescription"
-                            auto-grow
-                            class="mb-2"
-                            density="compact"
-                            label="Description"
-                          />
-
-                          <v-btn
-                            class="mr-2"
-                            color="primary"
-                            size="small"
-                            @click="saveEdit(task)"
-                          >
-                            Save
-                          </v-btn>
-                          <v-btn
-                            size="small"
-                            variant="text"
-                            @click="cancelEdit(task)"
-                          >
-                            Cancel
-                          </v-btn>
-                        </div>
-
-                        <div v-else>
-                          <div
-                            :class="task.isDone ? 'text-decoration-line-through' : ''"
-                            class="text-subtitle-1 font-weight-medium"
-                          >
-                            {{ task.title }}
-                          </div>
-
-                          <div
-                            v-if="task.description"
-                            :class="task.isDone ? 'text-decoration-line-through' : ''"
-                            class="text-body-2 text-medium-emphasis"
-                          >
-                            {{ task.description }}
-                          </div>
-
-                          <v-chip
-                            :color="
-                                  task.statusName === 'done'
-                                    ? 'green-darken-1'
-                                    : task.statusName === 'in-progress'
-                                      ? 'blue-darken-1'
-                                      : 'grey-darken-1'
-                                "
-                            class="mt-1"
-                            size="x-small"
-                            text-color="white"
-                          >
-                            {{
-                              task.statusName === 'done'
-                                ? 'Done'
-                                : task.statusName === 'in-progress'
-                                  ? 'In progress'
-                                  : 'To do'
-                            }}
-                          </v-chip>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="d-flex flex-column align-end">
-                      <v-btn
-                        icon
-                        size="small"
-                        variant="text"
-                        @click="startEdit(task)"
-                      >
-                        <v-icon>mdi-pencil</v-icon>
-                      </v-btn>
-
-                      <v-btn
-                        icon
-                        size="small"
-                        variant="text"
-                        @click="deleteTask(task.id)"
-                      >
-                        <v-icon>mdi-delete</v-icon>
-                      </v-btn>
-                    </div>
-                  </div>
-
-                  <div class="text-caption text-medium-emphasis">
-                    Created: {{ new Date(task.createdAt).toLocaleString() }}
-                  </div>
-                </v-card-text>
-              </v-card>
-            </div>
-          </template>
-        </draggable>
-      </v-col>
-    </v-row>
-  </v-container>
-</template>
-
 <script setup>
 import {computed, onMounted, ref} from 'vue'
-import axios from 'axios'
-import draggable from 'vuedraggable'
+import {useRoute, useRouter} from 'vue-router'
+import {api} from '@/api/http'
 
-const API_BASE = 'http://localhost:3005/api'
-const TASKS_URL = `${API_BASE}/tasks`
-const LISTS_URL = `${API_BASE}/lists`
-const STATUSES_URL = `${API_BASE}/statuses`
+const route = useRoute()
+const router = useRouter()
 
+const spaceId = ref(Number(route.params.spaceId) || 0)
+
+const spaces = ref([])
 const lists = ref([])
-const listsById = ref({})
-const listsByKey = ref({})
-const columns = ref({})
+const tasks = ref([])
 
-const statuses = ref([])
-
+const search = ref('')
+const selectedListId = ref(null) // filter: null = all
 const loading = ref(false)
-const error = ref('')
-const listsLoaded = ref(false)
 
-const newTaskTitle = ref('')
-const newTaskDescription = ref('')
-const newTaskStatusId = ref(null)
-const addTaskListKey = ref(null)
-const newListTitle = ref('')
+// status IDs moeten matchen met jouw DB
+const statuses = [
+  {id: 1, title: 'TO DO'},
+  {id: 2, title: 'IN PROGRESS'},
+  {id: 3, title: 'DONE'},
+]
 
-// status options built from backend
-const statusOptions = computed(() =>
-  statuses.value.map((s) => ({
-    label:
-      s.name === 'todo'
-        ? 'To do'
-        : s.name === 'in-progress'
-          ? 'In progress'
-          : 'Done',
-    value: s.id,
-  })),
-)
+// drag state
+const dragging = ref(null) // { taskId }
 
-const SYSTEM_LIST_KEYS = ['todo', 'in-progress', 'done']
+const logout = () => {
+  localStorage.removeItem('access_token')
+  router.push('/login')
+}
 
-const selectedStatusFilter = ref('all')
+const loadSpaces = async () => {
+  const res = await api.get('/spaces')
+  spaces.value = res.data
 
-const userLists = computed(() =>
-  lists.value.filter((l) => !SYSTEM_LIST_KEYS.includes(l.key)),
-)
-
-const listFilterOptions = computed(() => [
-  {label: 'All lists', value: 'all'},
-  ...userLists.value.map((l) => ({
-    label: l.title,
-    value: l.key,
-  })),
-])
-
-const selectedListFilter = ref('all')
-
-const visibleLists = computed(() =>
-  selectedListFilter.value === 'all'
-    ? userLists.value
-    : userLists.value.filter((l) => l.key === selectedListFilter.value),
-)
-
-const listOptions = computed(() =>
-  userLists.value.map((l) => ({
-    label: l.title,
-    value: l.key,
-  })),
-)
-
-const statusFilterOptions = computed(() => [
-  {label: 'All statuses', value: 'all'},
-  ...statuses.value.map((s) => ({
-    label:
-      s.name === 'todo'
-        ? 'To do'
-        : s.name === 'in-progress'
-          ? 'In progress'
-          : 'Done',
-    value: s.name,
-  })),
-])
-
-const hasAnyTasks = computed(() =>
-  Object.values(columns.value).some((col) => (col || []).length > 0),
-)
-
-function enhanceList(l) {
-  const title = l.title ?? l.name ?? ''
-  return {
-    ...l,
-    title,
-    editing: false,
-    editTitle: title,
+  if (!spaceId.value && spaces.value.length) {
+    spaceId.value = spaces.value[0].id
+    router.replace(`/board/${spaceId.value}`)
   }
 }
 
-function enhanceTask(t) {
-  const statusName = t.status?.name ?? t.statusName ?? 'todo'
-  const statusId = t.status?.id ?? t.statusId ?? null
-
-  return {
-    ...t,
-    editing: false,
-    editTitle: t.title,
-    editDescription: t.description ?? '',
-    statusName,
-    statusId,
-  }
-}
-
-function getErrorMessage(err, fallback) {
-  if (err?.response?.data) {
-    const data = err.response.data
-    if (Array.isArray(data.message)) return data.message.join('\n')
-    if (typeof data.message === 'string') return data.message
-  }
-  return fallback
-}
-
-function findTaskLocation(taskId) {
-  for (const key of Object.keys(columns.value)) {
-    const idx = columns.value[key].findIndex((t) => t.id === taskId)
-    if (idx !== -1) return {key, idx}
-  }
-  return null
-}
-
-function matchesStatusFilter(task) {
-  const filter = selectedStatusFilter.value
-  if (filter === 'all') return true
-  return task.statusName === filter
-}
-
-async function loadStatuses() {
-  try {
-    const res = await axios.get(STATUSES_URL)
-    statuses.value = res.data
-
-    // default for new tasks: first status or 'todo'
-    if (!newTaskStatusId.value && statuses.value.length > 0) {
-      const todo = statuses.value.find((s) => s.name === 'todo')
-      newTaskStatusId.value = todo ? todo.id : statuses.value[0].id
-    }
-  } catch (err) {
-    console.error('Error loading statuses', err)
-    error.value = getErrorMessage(err, 'Could not load statuses.')
-  }
-}
-
-async function loadBoard() {
+const loadBoard = async () => {
+  if (!spaceId.value) return
   loading.value = true
-  error.value = ''
   try {
-    const listsRes = await axios.get(LISTS_URL)
-    lists.value = listsRes.data.map(enhanceList)
+    const resLists = await api.get(`/lists/space/${spaceId.value}`)
+    lists.value = resLists.data
 
-
-    // reset maps and columns
-    listsById.value = {}
-    listsByKey.value = {}
-    columns.value = {}
-
+    const all = []
     for (const l of lists.value) {
-      listsById.value[l.id] = l
-      listsByKey.value[l.key] = l
-      if (!columns.value[l.key]) columns.value[l.key] = []
+      const resTasks = await api.get(`/tasks/list/${l.id}`)
+      all.push(...resTasks.data)
     }
-
-    listsLoaded.value = true
-
-    const tasksRes = await axios.get(TASKS_URL)
-    const tasks = tasksRes.data
-
-
-    // clear all columns
-    for (const key of Object.keys(columns.value)) {
-      columns.value[key] = []
-    }
-
-    for (const t of tasks) {
-      const enhanced = enhanceTask(t)
-
-      // find list key: prefer relation, fallback to listsById
-      const listKey =
-        t.list?.key ?? listsById.value[t.listId]?.key ?? 'todo'
-
-      console.log(
-        'Place task',
-        enhanced.id,
-        'title:',
-        enhanced.title,
-        'listId:',
-        t.listId,
-        '=> listKey:',
-        listKey,
-      )
-
-      if (!columns.value[listKey]) columns.value[listKey] = []
-      columns.value[listKey].push(enhanced)
-    }
-
-    if (!addTaskListKey.value && userLists.value.length > 0) {
-      addTaskListKey.value = userLists.value[0].key
-    }
-  } catch (err) {
-    console.error('Error loading board', err)
-    error.value = getErrorMessage(err, 'Could not load board data.')
+    tasks.value = all
   } finally {
     loading.value = false
   }
 }
 
-
-function getStatusIdByName(name) {
-  return statuses.value.find((s) => s.name === name)?.id ?? null
-}
-
-async function toggleDone(task) {
-  error.value = ''
-  try {
-    const newIsDone = task.isDone
-    const newStatusName = newIsDone ? 'done' : 'todo'
-    const newStatusId = getStatusIdByName(newStatusName)
-
-    const res = await axios.patch(`${TASKS_URL}/${task.id}`, {
-      isDone: newIsDone,
-      statusId: newStatusId ?? task.statusId,
-    })
-
-    const updated = enhanceTask(res.data)
-    const loc = findTaskLocation(task.id)
-    if (loc) columns.value[loc.key][loc.idx] = updated
-  } catch (err) {
-    console.error('Error updating task', err)
-    error.value = getErrorMessage(err, 'Could not update task.')
-  }
-}
-
-function startEdit(task) {
-  task.editing = true
-  task.editTitle = task.title
-  task.editDescription = task.description ?? ''
-}
-
-function cancelEdit(task) {
-  task.editing = false
-  task.editTitle = task.title
-  task.editDescription = task.description ?? ''
-}
-
-async function saveEdit(task) {
-  error.value = ''
-  try {
-    const res = await axios.patch(`${TASKS_URL}/${task.id}`, {
-      title: task.editTitle,
-      description: task.editDescription || undefined,
-    })
-
-    const updated = enhanceTask(res.data)
-    const loc = findTaskLocation(task.id)
-    if (loc) {
-      columns.value[loc.key].splice(loc.idx, 1, updated)
-    }
-  } catch (err) {
-    console.error('Error saving task', err)
-    error.value = getErrorMessage(err, 'Could not save task.')
-  } finally {
-    task.editing = false
-  }
-}
-
-async function addTask() {
-  console.log('addTask CALLED')
-  console.log('newTaskTitle:', newTaskTitle.value)
-  console.log('listsLoaded:', listsLoaded.value)
-  console.log('newTaskStatusId:', newTaskStatusId.value)
-
-  // 1. Titel check
-  if (!newTaskTitle.value.trim()) {
-    error.value = 'Titel is verplicht.'
-    return
-  }
-
-  // 2. Lijsten moeten geladen zijn
-  if (!listsLoaded.value) {
-    error.value = 'Lijsten zijn nog niet geladen. Ververs de pagina of controleer de backend (/api/lists).'
-    return
-  }
-
-  // 3. Status moet gekozen zijn
-  if (!newTaskStatusId.value) {
-    if (statuses.value.length > 0) {
-      // fallback: eerste status gebruiken
-      newTaskStatusId.value = statuses.value[0].id
-    } else {
-      error.value = 'Geen statussen beschikbaar. /api/statuses geeft waarschijnlijk niets terug.'
-      return
-    }
-  }
-
-  error.value = ''
-
-  let finalListKey = addTaskListKey.value
-  console.log('init finalListKey:', finalListKey, 'newListTitle:', newListTitle.value)
-
-  // 4. Als er nog geen lijst is gekozen en je hebt geen nieuwe lijstnaam ingevuld
-  if (!finalListKey && !newListTitle.value.trim()) {
-    error.value = 'Kies een lijst of vul een nieuwe lijst in bij "Or create new list".'
-    return
-  }
-
-  try {
-    // eventueel nieuwe lijst aanmaken
-    if (newListTitle.value.trim()) {
-      const listRes = await axios.post(LISTS_URL, {
-        name: newListTitle.value.trim(),
-      })
-      console.log('created list res:', listRes.data)
-
-      const newListRaw = listRes.data
-      const newList = enhanceList(newListRaw)
-
-      lists.value.push(newList)
-      listsById.value[newList.id] = newList
-      listsByKey.value[newList.key] = newList
-      if (!columns.value[newList.key]) columns.value[newList.key] = []
-
-      finalListKey = newList.key
-      newListTitle.value = ''
-
-      if (!addTaskListKey.value) addTaskListKey.value = finalListKey
-    }
-
-    console.log('final finalListKey:', finalListKey)
-    const chosenList = listsByKey.value[finalListKey]
-    console.log('chosenList:', chosenList)
-
-    if (!chosenList) {
-      error.value = 'Interne fout: lijst niet gevonden. (Unknown list)'
-      return
-    }
-
-    const payload = {
-      title: newTaskTitle.value,
-      description: newTaskDescription.value || undefined,
-      listId: chosenList.id,
-      statusId: newTaskStatusId.value,
-    }
-    console.log('POST task payload:', payload)
-
-    const res = await axios.post(TASKS_URL, payload)
-    console.log('created task res:', res.data)
-
-    const task = enhanceTask(res.data)
-
-    if (!columns.value[finalListKey]) columns.value[finalListKey] = []
-    columns.value[finalListKey].unshift(task)
-
-    newTaskTitle.value = ''
-    newTaskDescription.value = ''
-    addTaskListKey.value = finalListKey
-  } catch (err) {
-    console.error('Error adding task', err)
-    error.value = getErrorMessage(err, 'Could not add task.')
-  }
-}
-
-
-async function onDragEnd(evt) {
-  const newKey = evt.to?.dataset?.listKey
-  const oldKey = evt.from?.dataset?.listKey
-
-  console.log('onDragEnd', {newKey, oldKey, evt})
-  if (!newKey || !oldKey) {
-    console.warn('Missing listKey on drag', {newKey, oldKey})
-    return
-  }
-  const newCol = columns.value[newKey] || []
-  const movedTask = newCol[evt.newIndex]
-  if (!movedTask) {
-    console.warn('No movedTask found at newIndex', evt.newIndex)
-    return
-  }
-
-  const list = listsByKey.value[newKey]
-  if (!list) {
-    console.warn('No list found for key', newKey)
-    return
-  }
-
-
-  const rawId = movedTask.id
-  const taskId = Number(rawId)
-
-  console.log('movedTask.id RAW:', rawId, '=> Number:', taskId)
-
-  if (!rawId && rawId !== 0) {
-    console.warn('Task has no id, cannot PATCH', movedTask)
-    return
-  }
-
-  if (Number.isNaN(taskId)) {
-    console.warn('Task id is not a valid number, cannot PATCH', rawId)
-    return
-  }
-
-
-  const payload = {
-    listId: list.id,
-    isDone: movedTask.isDone,
-  }
-
-  console.log('PATCH move payload', payload)
-
-  try {
-    await axios.patch(`${TASKS_URL}/${taskId}`, payload)
-    // Optional: could read response and sync, but not required for listId.
-  } catch (err) {
-    console.error('Error moving task', err)
-    error.value = getErrorMessage(err, 'Could not move task.')
-
-    newCol.splice(evt.newIndex, 1)
-    if (!columns.value[oldKey]) columns.value[oldKey] = []
-    columns.value[oldKey].splice(evt.oldIndex, 0, movedTask)
-  }
-}
-
-function startEditList(list) {
-  list.editing = true
-  list.editTitle = list.title
-}
-
-function cancelEditList(list) {
-  list.editing = false
-  list.editTitle = list.title
-}
-
-async function saveEditList(list) {
-  error.value = ''
-  try {
-    const res = await axios.patch(`${LISTS_URL}/${list.id}`, {
-      name: list.editTitle,
-    })
-    const updated = enhanceList(res.data)
-
-    list.title = updated.title
-    list.editTitle = updated.editTitle
-    list.editing = false
-  } catch (err) {
-    console.error('Error renaming list', err)
-    error.value = getErrorMessage(err, 'Could not rename list.')
-  }
-}
-
-async function deleteList(list) {
-  error.value = ''
-  try {
-    await axios.delete(`${LISTS_URL}/${list.id}`)
-
-    lists.value = lists.value.filter((l) => l.id !== list.id)
-    delete listsById.value[list.id]
-    delete listsByKey.value[list.key]
-    delete columns.value[list.key]
-
-    if (selectedListFilter.value === list.key) {
-      selectedListFilter.value = 'all'
-    }
-    if (addTaskListKey.value === list.key) {
-      addTaskListKey.value =
-        userLists.value.length > 0 ? userLists.value[0].key : null
-    }
-  } catch (err) {
-    console.error('Error deleting list', err)
-    error.value = getErrorMessage(err, 'Could not delete list.')
-  }
-}
-
 onMounted(async () => {
-  await Promise.all([loadStatuses(), loadBoard()])
+  await loadSpaces()
+  await loadBoard()
 })
+
+const currentSpaceName = computed(() => {
+  const s = spaces.value.find(x => x.id === spaceId.value)
+  return s?.name ?? 'Space'
+})
+
+const filteredLists = computed(() => lists.value)
+
+const visibleTasks = computed(() => {
+  let t = tasks.value
+
+  if (selectedListId.value) {
+    t = t.filter(x => x.listId === selectedListId.value)
+  }
+
+  if (search.value.trim()) {
+    const q = search.value.trim().toLowerCase()
+    t = t.filter(x => (x.title || '').toLowerCase().includes(q))
+  }
+
+  return t
+})
+
+const tasksBy = (listId, statusId) => {
+  return visibleTasks.value
+    .filter(t => t.listId === listId && t.statusId === statusId)
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+}
+
+const onDragStart = (ev, task) => {
+  ev.dataTransfer.setData('text/plain', String(task.id))
+  ev.dataTransfer.effectAllowed = 'move'
+  dragging.value = {taskId: task.id}
+}
+
+const onDrop = async (toListId, toStatusId, toIndex) => {
+  if (!dragging.value) return
+  const taskId = dragging.value.taskId
+  dragging.value = null
+
+  const draggedTask = tasks.value.find(t => t.id === taskId)
+  if (!draggedTask) return
+
+  let newPosition = toIndex
+
+  const sameColumn =
+    draggedTask.listId === toListId &&
+    draggedTask.statusId === toStatusId
+
+  // fix: reorder within same column
+  if (sameColumn) {
+    if (toIndex > (draggedTask.position ?? 0)) {
+      newPosition = toIndex - 1
+    }
+  }
+
+  await api.patch(`/tasks/${taskId}/move`, {
+    listId: toListId,
+    statusId: toStatusId,
+    position: newPosition,
+  })
+
+  await loadBoard()
+}
+
+const openSpace = async (id) => {
+  spaceId.value = id
+  selectedListId.value = null
+  await router.push(`/board/${id}`)
+  await loadBoard()
+}
+
+// UI helper: choose which list is active for the board (wireframe shows one list highlighted)
+const activeList = computed(() => {
+  if (selectedListId.value) return lists.value.find(l => l.id === selectedListId.value)
+  return lists.value[0] ?? null
+})
+
+const activeListId = computed(() => activeList.value?.id ?? null)
+
+const createTask = async () => {
+  // simpele create: maakt task in actieve list met status todo
+  if (!activeListId.value) return alert('Maak eerst een list')
+  const title = prompt('Task title?')
+  if (!title) return
+
+  await api.post('/tasks', {title, listId: activeListId.value})
+  await loadBoard()
+}
 </script>
 
+<template>
+  <div class="page">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="brand">Task Manager</div>
+
+      <div class="search">
+        <input v-model="search" class="searchInput" placeholder="Search"/>
+      </div>
+
+      <button class="createBtn" @click="createTask">Creat Task</button>
+
+      <nav class="topLinks">
+        <a class="topLink" href="#">Link four</a>
+        <a class="topLink" href="#">Link three</a>
+      </nav>
+
+      <div class="topIcons">
+        <button class="iconBtn" title="Help">?</button>
+        <button class="iconBtn" title="Settings">⚙</button>
+        <button class="iconBtn" title="Account">👤</button>
+      </div>
+    </header>
+
+    <!-- BODY -->
+    <div class="body">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="sidebarTitle">{{ currentSpaceName }}</div>
+
+        <div class="sidebarSection">
+          <div class="sidebarHeader">
+            <span>Recent</span>
+            <span class="menu">≡</span>
+          </div>
+          <button :class="{active: !selectedListId}" class="sidebarItem" @click="selectedListId = null">
+            All
+          </button>
+        </div>
+
+        <div class="sidebarSection">
+          <div class="sidebarHeader">
+            <span>Spaces</span>
+            <span class="menu">▾</span>
+          </div>
+
+          <div class="spacesList">
+            <button
+              v-for="s in spaces"
+              :key="s.id"
+              :class="{active: s.id === spaceId}"
+              class="spaceBtn"
+              @click="openSpace(s.id)"
+            >
+              {{ s.name }}
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebarSection">
+          <div class="sidebarHeader">
+            <span>Lists</span>
+            <span class="menu">≡</span>
+          </div>
+
+          <div class="listsBox">
+            <button
+              v-for="l in filteredLists"
+              :key="l.id"
+              :class="{active: l.id === selectedListId}"
+              class="listBtn"
+              @click="selectedListId = l.id"
+            >
+              {{ l.name }}
+            </button>
+          </div>
+        </div>
+
+        <button class="dashBtn" @click="router.push('/dashboard')">Dashboard</button>
+        <button class="logoutBtn" @click="logout">Logout</button>
+      </aside>
+
+      <!-- BOARD -->
+      <main class="board">
+        <div class="boardTop">
+          <div class="chips">
+            <span class="chip">Space</span>
+            <span class="chip">Project</span>
+            <span class="chip">Type</span>
+          </div>
+
+          <div class="boardTitle">
+            {{ activeList?.name ?? 'Project' }}
+          </div>
+        </div>
+
+        <div v-if="loading" class="loading">Loading...</div>
+
+        <!-- columns for ACTIVE list only (like wireframe) -->
+        <div v-if="activeListId" class="columns">
+          <div
+            v-for="st in statuses"
+            :key="st.id"
+            class="col"
+            @dragover.prevent
+            @drop.prevent="onDrop(activeListId, st.id, tasksBy(activeListId, st.id).length)"
+          >
+            <div class="colHeader">
+              <span class="colTitle">{{ st.title }}</span>
+              <span class="colCount">{{ tasksBy(activeListId, st.id).length }}</span>
+            </div>
+
+            <div class="colBody">
+              <template v-for="(t, index) in tasksBy(activeListId, st.id)" :key="t.id">
+                <div
+                  class="dropZone"
+                  @dragover.prevent
+                  @drop.prevent="onDrop(activeListId, st.id, index)"
+                />
+                <div
+                  class="card"
+                  draggable="true"
+                  @dragstart="onDragStart($event, t)"
+                >
+                  <div class="cardRow">
+                    <div class="cardTitle">{{ t.title }}</div>
+                    <div class="badge">•</div>
+                  </div>
+                  <div class="cardMeta">id: {{ t.id }} · pos: {{ t.position }}</div>
+                </div>
+              </template>
+
+              <div
+                class="dropZone"
+                @dragover.prevent
+                @drop.prevent="onDrop(activeListId, st.id, tasksBy(activeListId, st.id).length)"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="empty">
+          Maak eerst een list in deze space.
+        </div>
+
+      </main>
+    </div>
+  </div>
+</template>
+
 <style scoped>
-.text-decoration-line-through {
-  text-decoration: line-through;
+.page {
+  min-height: 100vh;
+  background: #1f2836;
+  color: #e9eef7;
+}
+
+/* TOPBAR */
+.topbar {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  background: #1a2230;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 14px;
+}
+
+.brand {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.search {
+  flex: 1;
+  max-width: 520px;
+}
+
+.searchInput {
+  width: 100%;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #111827;
+  color: #e9eef7;
+  padding: 0 10px;
+  outline: none;
+}
+
+.createBtn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #1e8e3e;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.topLinks {
+  display: flex;
+  gap: 16px;
+  margin-left: 6px;
+}
+
+.topLink {
+  color: rgba(233, 238, 247, 0.85);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.topIcons {
+  display: flex;
+  gap: 10px;
+  margin-left: 6px;
+}
+
+.iconBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #111827;
+  color: #e9eef7;
+  cursor: pointer;
+}
+
+/* BODY */
+.body {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  gap: 18px;
+  padding: 16px;
+}
+
+/* SIDEBAR */
+.sidebar {
+  background: #2a3446;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  height: calc(100vh - 96px);
+  position: sticky;
+  top: 80px;
+}
+
+.sidebarTitle {
+  font-weight: 800;
+  font-size: 16px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+  margin-bottom: 12px;
+}
+
+.sidebarSection {
+  margin-bottom: 14px;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: rgba(233, 238, 247, 0.8);
+  font-size: 13px;
+  margin: 10px 4px;
+}
+
+.menu {
+  opacity: 0.7;
+}
+
+.sidebarItem {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.15);
+  color: #e9eef7;
+  cursor: pointer;
+}
+
+.sidebarItem.active {
+  background: #f59e0b;
+  color: #111827;
+  font-weight: 800;
+}
+
+.spacesList, .listsBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spaceBtn, .listBtn {
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.12);
+  color: #e9eef7;
+  cursor: pointer;
+}
+
+.spaceBtn.active, .listBtn.active {
+  background: #3b82f6;
+  border-color: rgba(255, 255, 255, 0.12);
+  font-weight: 800;
+}
+
+.dashBtn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+  color: #e9eef7;
+  cursor: pointer;
+}
+
+.logoutBtn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: #ef4444;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* BOARD */
+.board {
+  background: #2a3446;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px;
+  min-height: calc(100vh - 96px);
+}
+
+.boardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.chips {
+  display: flex;
+  gap: 10px;
+}
+
+.chip {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+  color: rgba(233, 238, 247, 0.9);
+}
+
+.boardTitle {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #111827;
+  font-weight: 900;
+}
+
+.loading, .empty {
+  padding: 16px;
+  color: rgba(233, 238, 247, 0.85);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.col {
+  background: #1f2836;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  min-height: 560px;
+}
+
+.colHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.colTitle {
+  color: #f59e0b;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.colCount {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.colBody {
+  padding: 10px 10px 14px 10px;
+}
+
+.dropZone {
+  height: 10px;
+}
+
+.card {
+  background: #2b3550;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  padding: 10px;
+  margin: 8px 0;
+  cursor: grab;
+}
+
+.cardRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.badge {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #f59e0b;
+  opacity: 0.9;
+}
+
+.cardMeta {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* responsive */
+@media (max-width: 1100px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .columns {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

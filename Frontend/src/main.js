@@ -1,6 +1,6 @@
 import {createApp} from 'vue';
 import App from './App.vue';
-import router from './router/index.ts.bak';
+import router from './router/index.js';
 
 // Vuetify
 import 'vuetify/styles';
