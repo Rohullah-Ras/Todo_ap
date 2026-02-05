@@ -5,14 +5,15 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { JWT_EXPIRES_IN, JWT_SECRET } from '../../shared/config/jwt.config';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'change-me',
-      signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any },
+      secret: JWT_SECRET,
+      signOptions: { expiresIn: JWT_EXPIRES_IN as any },
     }),
   ],
   controllers: [AuthController],

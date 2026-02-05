@@ -80,6 +80,10 @@ const activeList = computed(() => {
   return lists.value[0] ?? null
 })
 const activeListId = computed(() => activeList.value?.id ?? null)
+const currentSpaceName = computed(() => {
+  const current = spaces.value.find(s => s.id === spaceId.value) ?? spaces.value[0]
+  return current?.name ?? 'No space'
+})
 
 const closeModal = () => {
   isModalOpen.value = false
@@ -118,6 +122,43 @@ const openCreateSpace = () => {
   modalTab.value = 'space'
   spaceForm.value = {name: '', description: ''}
   isModalOpen.value = true
+}
+
+const openSpace = async (id) => {
+  if (!id || id === spaceId.value) return
+  spaceId.value = id
+  selectedListId.value = null
+  await router.push(`/board/${id}`)
+  await loadBoard()
+}
+
+const setting = () => {
+  router.push('/settings')
+}
+
+const tasksBy = (listId, statusId) => {
+  return tasks.value
+    .filter(t => t.listId === listId && t.statusId === statusId)
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+}
+
+const onDragStart = (event, task) => {
+  dragging.value = task
+  event?.dataTransfer?.setData('text/plain', String(task.id))
+}
+
+const onDrop = (listId, statusId, position) => {
+  if (!dragging.value) return
+  const idx = tasks.value.findIndex(t => t.id === dragging.value.id)
+  if (idx !== -1) {
+    tasks.value[idx] = {
+      ...tasks.value[idx],
+      listId,
+      statusId,
+      position,
+    }
+  }
+  dragging.value = null
 }
 
 

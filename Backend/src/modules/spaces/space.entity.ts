@@ -17,8 +17,8 @@ export class Space {
   @Column('varchar')
   name: string;
 
-  @Column()
-  userId: number; // later koppelen aan auth user
+  @Column('uuid', { nullable: true })
+  userId: string | null; // later koppelen aan auth user
 
   @OneToMany(() => List, (list) => list.space)
   lists: List[];

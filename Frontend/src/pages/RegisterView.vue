@@ -1,9 +1,10 @@
 <script setup>
 import {ref} from 'vue'
 import {useRouter} from 'vue-router'
-import {api} from '@/api/http'
+import {useAuthStore} from '@/api/auth'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const fullName = ref('')
 const email = ref('')
@@ -32,13 +33,11 @@ const submit = async () => {
 
   loading.value = true
   try {
-    const res = await api.post('/auth/register', {
+    await auth.signUp({
       email: email.value,
       password: password.value,
       fullName: fullName.value,
     })
-
-    localStorage.setItem('access_token', res.data.access_token)
     router.push('/dashboard')
   } catch (e) {
     // simpele foutmelding (later kunnen we mooier maken)

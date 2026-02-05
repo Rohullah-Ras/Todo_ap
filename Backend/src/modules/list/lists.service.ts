@@ -40,7 +40,7 @@ export class ListsService {
   }
 
   // POST /lists
-  async create(userId: number, dto: CreateListDto): Promise<List> {
+  async create(userId: string, dto: CreateListDto): Promise<List> {
     if (!userId) {
       throw new UnauthorizedException('User ID is required');
     }
@@ -61,7 +61,7 @@ export class ListsService {
     return this.listRepo.save(list);
   }
 
-  async findBySpace(userId: number, spaceId: number) {
+  async findBySpace(userId: string, spaceId: number) {
     const space = await this.spaceRepo.findOne({
       where: { id: spaceId, userId },
     });

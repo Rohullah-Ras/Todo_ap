@@ -14,8 +14,11 @@ api.interceptors.request.use((config) => {
     return config
   }
 
-  const token = localStorage.getItem('access_token')
-  if (token) {
+  const token =
+    localStorage.getItem('access_token') ||
+    localStorage.getItem('accessToken') ||
+    localStorage.getItem('token')
+  if (token && token !== 'undefined' && token !== 'null') {
     config.headers = config.headers ?? {}
     config.headers.Authorization = `Bearer ${token}`
   }

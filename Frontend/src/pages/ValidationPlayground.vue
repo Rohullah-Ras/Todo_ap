@@ -77,7 +77,6 @@
 
 <script lang="ts" setup>
 import {ref} from 'vue'
-import axios from 'axios'
 
 // ↓↓↓ ONLY THIS PART CHANGES FOR YOUR BACKEND ↓↓↓
 const API_BASE = 'http://localhost:3005/api'
@@ -118,7 +117,7 @@ async function sendRequest() {
 
     const parsed = JSON.parse(requestBody.value)
 
-    const res = await axios.post(url, parsed)
+    const res = await api.post(url.replace(API_BASE, ''), parsed)
     successText.value = JSON.stringify(res.data, null, 2)
   } catch (err: any) {
     if (err.response) {

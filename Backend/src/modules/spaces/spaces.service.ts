@@ -11,14 +11,14 @@ export class SpacesService {
     private readonly spaceRepo: Repository<Space>,
   ) {}
 
-  findAllForUser(userId: number) {
+  findAllForUser(userId: string) {
     return this.spaceRepo.find({
       where: { userId },
       order: { id: 'DESC' },
     });
   }
 
-  createForUser(userId: number, dto: CreateSpaceDto) {
+  createForUser(userId: string, dto: CreateSpaceDto) {
     const space = this.spaceRepo.create({
       name: dto.name,
       userId,
@@ -26,20 +26,20 @@ export class SpacesService {
     return this.spaceRepo.save(space);
   }
 
-  findAll(userId: number) {
+  findAll(userId: string) {
     return this.spaceRepo.find({
       where: { userId },
       order: { id: 'ASC' },
     });
   }
 
-  async create(userId: number, name: string) {
+  async create(userId: string, name: string) {
     const space = this.spaceRepo.create({ name, userId });
     return this.spaceRepo.save(space);
   }
 
   // 1e delete -> soft delete (naar trash)
-  async softDelete(userId: number, id: number) {
+  async softDelete(userId: string, id: number) {
     const space = await this.spaceRepo.findOne({ where: { id, userId } });
     if (!space) throw new NotFoundException(`Space #${id} not found`);
     await this.spaceRepo.softDelete(id);
@@ -47,7 +47,7 @@ export class SpacesService {
   }
 
   // 2e delete -> permanent (alleen als al soft-deleted)
-  async hardDelete(userId: number, id: number) {
+  async hardDelete(userId: string, id: number) {
     const space = await this.spaceRepo.findOne({
       where: { id, userId },
       withDeleted: true,
@@ -65,7 +65,7 @@ export class SpacesService {
   }
 
   // Trash list
-  async findTrash(userId: number) {
+  async findTrash(userId: string) {
     const all = await this.spaceRepo.find({
       where: { userId },
       withDeleted: true,
@@ -74,7 +74,7 @@ export class SpacesService {
   }
 
   // Restore uit trash
-  async restore(userId: number, id: number) {
+  async restore(userId: string, id: number) {
     const space = await this.spaceRepo.findOne({
       where: { id, userId },
       withDeleted: true,
