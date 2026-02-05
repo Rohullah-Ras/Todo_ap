@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Not, Repository } from 'typeorm';
@@ -39,8 +40,14 @@ export class ListsService {
   }
 
   // POST /lists
-  async create(dto: CreateListDto): Promise<List> {
-    const space = await this.spaceRepo.findOne({ where: { id: dto.spaceId } });
+  async create(userId: number, dto: CreateListDto): Promise<List> {
+    if (!userId) {
+      throw new UnauthorizedException('User ID is required');
+    }
+
+    const space = await this.spaceRepo.findOne({
+      where: { id: dto.spaceId, userId },
+    });
     if (!space) {
       throw new NotFoundException(`Space #${dto.spaceId} not found`);
     }
@@ -54,11 +61,13 @@ export class ListsService {
     return this.listRepo.save(list);
   }
 
-  findBySpace(spaceId: number): Promise<List[]> {
-    return this.listRepo.find({
-      where: { spaceId },
-      order: { id: 'ASC' },
+  async findBySpace(userId: number, spaceId: number) {
+    const space = await this.spaceRepo.findOne({
+      where: { id: spaceId, userId },
     });
+    if (!space) throw new NotFoundException('Space not found');
+
+    return this.listRepo.find({ where: { spaceId }, order: { id: 'ASC' } });
   }
 
   // PATCH /lists/:id

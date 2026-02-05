@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Space } from './space.entity';
+import { CreateSpaceDto } from './dto/create-space.dto';
 
 @Injectable()
 export class SpacesService {
@@ -9,6 +10,21 @@ export class SpacesService {
     @InjectRepository(Space)
     private readonly spaceRepo: Repository<Space>,
   ) {}
+
+  findAllForUser(userId: number) {
+    return this.spaceRepo.find({
+      where: { userId },
+      order: { id: 'DESC' },
+    });
+  }
+
+  createForUser(userId: number, dto: CreateSpaceDto) {
+    const space = this.spaceRepo.create({
+      name: dto.name,
+      userId,
+    });
+    return this.spaceRepo.save(space);
+  }
 
   findAll(userId: number) {
     return this.spaceRepo.find({

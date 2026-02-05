@@ -7,12 +7,17 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { ListsService } from './lists.service';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('lists') // -> /api/lists (because of global "api" prefix)
+@UseGuards(JwtAuthGuard)
+@Controller('lists')
 export class ListsController {
   constructor(private readonly listsService: ListsService) {}
 
@@ -22,13 +27,16 @@ export class ListsController {
   }
 
   @Get('space/:spaceId')
-  findBySpace(@Param('spaceId', ParseIntPipe) spaceId: number) {
-    return this.listsService.findBySpace(spaceId);
+  findBySpace(
+    @CurrentUser() user: any,
+    @Param('spaceId', ParseIntPipe) spaceId: number,
+  ) {
+    return this.listsService.findBySpace(user.id, spaceId);
   }
 
   @Post()
-  create(@Body() dto: CreateListDto) {
-    return this.listsService.create(dto);
+  create(@CurrentUser() user: any, @Body() dto: CreateListDto) {
+    return this.listsService.create(user.id, dto);
   }
 
   @Patch(':id')

@@ -3,6 +3,8 @@ import LoginView from '../pages/LoginView.vue'
 import RegisterView from '../pages/RegisterView.vue'
 import DashBoard from '../pages/DashBoard.vue'
 import BoardView from '../pages/BoardView.vue'
+import Setting from '../pages/Setting.vue'
+import {useAuthStore} from "@/api/auth";
 
 const routes = [
   {path: '/', redirect: '/login'},
@@ -24,6 +26,13 @@ const routes = [
     meta: {requiresAuth: true},
     props: true,
   },
+
+  {
+    path: '/settings',
+    name: 'Setting',
+    component: Setting,
+    meta: {requiresAuth: true},
+  },
 ]
 
 const router = createRouter({
@@ -31,16 +40,23 @@ const router = createRouter({
   routes,
 })
 
+
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('access_token')
+  const auth = useAuthStore()
 
-  if (to.meta.requiresAuth && !token) return next('/login')
+  const hasToken =
+    auth.token || localStorage.getItem('access_token')
 
-  if ((to.path === '/login' || to.path === '/register') && token) {
+  if ((to.path === '/login' || to.path === '/register') && hasToken) {
     return next('/dashboard')
+  }
+
+  if (to.meta.requiresAuth && !hasToken) {
+    return next('/login')
   }
 
   next()
 })
+
 
 export default router

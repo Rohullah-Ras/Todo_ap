@@ -12,13 +12,18 @@
     <v-form class="form" @submit.prevent="submit">
       <v-text-field v-model.trim="fullName" :rules="[rules.required]" autocomplete="name" label="Full Name"
                     placeholder="Name..." variant="underlined"/>
-      <v-text-field v-model.trim="email" :rules="[rules.required, rules.email]" autocomplete="email" label="Enter your e-mail"
+      <v-text-field v-model.trim="email" :rules="[rules.required, rules.email]" autocomplete="email"
+                    label="Enter your e-mail"
                     placeholder="Email address..." variant="underlined"/>
-      <v-text-field v-model.trim="username" :rules="[rules.required, rules.username]" autocomplete="username" label="Create a username"
+      <v-text-field v-model.trim="username" :rules="[rules.required, rules.username]" autocomplete="username"
+                    label="Create a username"
                     placeholder="Username..." variant="underlined"/>
-      <v-text-field v-model="password" :rules="[rules.required, rules.min8]" autocomplete="new-password" label="Create Password"
+      <v-text-field v-model="password" :rules="[rules.required, rules.min8]" autocomplete="new-password"
+                    label="Create Password"
                     type="password" variant="underlined"/>
-      <v-text-field v-model="password2" :rules="[rules.required, () => password2 === password || 'Passwords do not match']" autocomplete="new-password" label="Repeat password"
+      <v-text-field v-model="password2"
+                    :rules="[rules.required, () => password2 === password || 'Passwords do not match']"
+                    autocomplete="new-password" label="Repeat password"
                     type="password"
                     variant="underlined"/>
 
@@ -42,7 +47,8 @@
 
 <script lang="ts" setup>
 import {ref} from 'vue'
-import {useAuthStore} from '@/stores/auth'
+import {useAuthStore} from '@/api/auth'
+import {useRouter} from 'vue-router'
 
 const auth = useAuthStore()
 
@@ -63,6 +69,8 @@ const rules = {
   username: (v: string) => /^[a-zA-Z0-9._-]{3,20}$/.test(v) || '3-20 chars: letters/numbers/._-',
 }
 
+const router = useRouter()
+
 async function submit() {
   error.value = ''
   loading.value = true
@@ -73,7 +81,11 @@ async function submit() {
       email: email.value,
       password: password.value,
     })
-    window.location.href = '/board'
+
+    // ✅ direct inloggen (werkt altijd)
+    await auth.signIn({email: email.value, password: password.value})
+
+    await router.push('/dashboard')
   } catch (e: any) {
     const msg = e?.response?.data?.message
     error.value = Array.isArray(msg) ? msg.join('\n') : (msg ?? 'Sign up failed.')
@@ -81,6 +93,7 @@ async function submit() {
     loading.value = false
   }
 }
+
 </script>
 
 <style scoped>

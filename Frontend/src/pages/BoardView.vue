@@ -1,8 +1,11 @@
 <script setup>
-import {computed, onMounted, ref} from 'vue'
+import {computed, onMounted, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {api} from '@/api/http'
+import {useAuthStore} from '@/api/auth'
 
+
+const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -13,25 +16,134 @@ const lists = ref([])
 const tasks = ref([])
 
 const search = ref('')
-const selectedListId = ref(null) // filter: null = all
+const selectedListId = ref(null)
 const loading = ref(false)
 
-// status IDs moeten matchen met jouw DB
 const statuses = [
   {id: 1, title: 'TO DO'},
   {id: 2, title: 'IN PROGRESS'},
   {id: 3, title: 'DONE'},
 ]
 
-// drag state
-const dragging = ref(null) // { taskId }
+const dragging = ref(null)
 
-const logout = () => {
-  localStorage.removeItem('access_token')
-  router.push('/login')
+// --- modal state
+const isModalOpen = ref(false)
+const modalTab = ref('task') // 'task' | 'list'
+const modalSaving = ref(false)
+
+// form: task
+const taskForm = ref({
+  title: '',
+  description: '',
+  statusId: 1,
+  listId: null,
+})
+
+// form: list
+const listForm = ref({
+  name: '',
+})
+
+// form: space
+const spaceForm = ref({
+  name: '',
+  description: '',
+})
+
+
+// keep spaceId in sync with route
+watch(
+  () => route.params.spaceId,
+  (val) => {
+    const id = Number(val) || 0
+    if (id) spaceId.value = id
+  },
+  {immediate: true}
+)
+
+const filteredLists = computed(() => {
+  return lists.value
+})
+
+
+const effectiveSpaceId = computed(() => {
+  const fromRoute = Number(route.params.spaceId)
+  if (fromRoute) return fromRoute
+  if (spaceId.value) return spaceId.value
+  return spaces.value[0]?.id ?? 0
+})
+
+// UI helper: choose which list is active for the board
+const activeList = computed(() => {
+  if (selectedListId.value) return lists.value.find(l => l.id === selectedListId.value)
+  return lists.value[0] ?? null
+})
+const activeListId = computed(() => activeList.value?.id ?? null)
+
+const closeModal = () => {
+  isModalOpen.value = false
 }
 
+
+const openCreateList = () => {
+  modalTab.value = 'list'
+  listForm.value = {name: ''}
+  isModalOpen.value = true
+}
+
+
+const openCreateTask = () => {
+  if (!spaces.value.length) {
+    openCreateSpace()
+    return
+  }
+  if (!lists.value.length) {
+    openCreateList()
+    return
+  }
+
+  modalTab.value = 'task'
+  taskForm.value = {
+    title: '',
+    description: '',
+    statusId: 1,
+    listId: activeListId.value ?? lists.value[0]?.id ?? null,
+  }
+  isModalOpen.value = true
+}
+
+
+const openCreateSpace = () => {
+  modalTab.value = 'space'
+  spaceForm.value = {name: '', description: ''}
+  isModalOpen.value = true
+}
+
+
+// const openCreateTask = () => {
+//   if (!spaces.value.length) {
+//     openCreateSpace()
+//     return
+//   }
+//   if (!lists.value.length) {
+//     openCreateList()
+//     return
+//   }
+//
+//   modalTab.value = 'task'
+//   taskForm.value = {
+//     title: '',
+//     description: '',
+//     statusId: 1,
+//     listId: activeListId.value ?? lists.value[0]?.id ?? null,
+//   }
+//   isModalOpen.value = true
+// }
+
+
 const loadSpaces = async () => {
+  console.log('TOKEN?', localStorage.getItem('access_token'))
   const res = await api.get('/spaces')
   spaces.value = res.data
 
@@ -64,118 +176,116 @@ onMounted(async () => {
   await loadBoard()
 })
 
-const currentSpaceName = computed(() => {
-  const s = spaces.value.find(x => x.id === spaceId.value)
-  return s?.name ?? 'Space'
-})
 
-const filteredLists = computed(() => lists.value)
-
-const visibleTasks = computed(() => {
-  let t = tasks.value
-
-  if (selectedListId.value) {
-    t = t.filter(x => x.listId === selectedListId.value)
-  }
-
-  if (search.value.trim()) {
-    const q = search.value.trim().toLowerCase()
-    t = t.filter(x => (x.title || '').toLowerCase().includes(q))
-  }
-
-  return t
-})
-
-const tasksBy = (listId, statusId) => {
-  return visibleTasks.value
-    .filter(t => t.listId === listId && t.statusId === statusId)
-    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+const logout = async () => {
+  auth.logout()
+  await router.push('/login')
 }
 
-const onDragStart = (ev, task) => {
-  ev.dataTransfer.setData('text/plain', String(task.id))
-  ev.dataTransfer.effectAllowed = 'move'
-  dragging.value = {taskId: task.id}
-}
 
-const onDrop = async (toListId, toStatusId, toIndex) => {
-  if (!dragging.value) return
-  const taskId = dragging.value.taskId
-  dragging.value = null
+const saveModal = async () => {
+  if (modalSaving.value) return
+  modalSaving.value = true
 
-  const draggedTask = tasks.value.find(t => t.id === taskId)
-  if (!draggedTask) return
+  try {
+    if (modalTab.value === 'task') {
+      const title = taskForm.value.title.trim()
+      if (!title) return alert('Title is verplicht')
 
-  let newPosition = toIndex
+      const listId = taskForm.value.listId ?? activeListId.value
+      if (!listId) return alert('Kies een list')
 
-  const sameColumn =
-    draggedTask.listId === toListId &&
-    draggedTask.statusId === toStatusId
+      await api.post('/tasks', {
+        title,
+        description: taskForm.value.description?.trim() || null,
+        statusId: taskForm.value.statusId,
+        listId,
+      })
 
-  // fix: reorder within same column
-  if (sameColumn) {
-    if (toIndex > (draggedTask.position ?? 0)) {
-      newPosition = toIndex - 1
+      closeModal()
+      await loadBoard()
+      return
     }
+
+    if (modalTab.value === 'list') {
+      const name = listForm.value.name.trim()
+      if (!name) return alert('List naam is verplicht')
+
+      const sid = effectiveSpaceId.value
+      if (!sid) return alert('Geen space geselecteerd')
+
+      await api.post('/lists', {name, spaceId: sid})
+
+      closeModal()
+      modalTab.value = 'task'
+      await loadBoard()
+      return
+    }
+
+    // modalTab === 'space'
+    const name = spaceForm.value.name.trim()
+    if (!name) return alert('Space naam is verplicht')
+
+    const res = await api.post('/spaces', {name})
+
+    const newId = res?.data?.id ?? 0
+    await loadSpaces()
+
+    if (newId) {
+      spaceId.value = newId
+      await router.push(`/board/${newId}`)
+    }
+
+
+    closeModal()
+    modalTab.value = 'task'
+    await loadBoard()
+  } catch (err) {
+    console.error('Save modal failed:', err)
+    const msg =
+      err?.response?.data?.message ??
+      err?.response?.data?.error ??
+      err?.message ??
+      'Opslaan mislukt'
+    alert(msg)
+  } finally {
+    modalSaving.value = false
   }
-
-  await api.patch(`/tasks/${taskId}/move`, {
-    listId: toListId,
-    statusId: toStatusId,
-    position: newPosition,
-  })
-
-  await loadBoard()
 }
 
-const openSpace = async (id) => {
-  spaceId.value = id
-  selectedListId.value = null
-  await router.push(`/board/${id}`)
-  await loadBoard()
-}
-
-// UI helper: choose which list is active for the board (wireframe shows one list highlighted)
-const activeList = computed(() => {
-  if (selectedListId.value) return lists.value.find(l => l.id === selectedListId.value)
-  return lists.value[0] ?? null
-})
-
-const activeListId = computed(() => activeList.value?.id ?? null)
-
-const createTask = async () => {
-  // simpele create: maakt task in actieve list met status todo
-  if (!activeListId.value) return alert('Maak eerst een list')
-  const title = prompt('Task title?')
-  if (!title) return
-
-  await api.post('/tasks', {title, listId: activeListId.value})
-  await loadBoard()
-}
 </script>
+
 
 <template>
   <div class="page">
     <!-- TOPBAR -->
     <header class="topbar">
-      <div class="brand">Task Manager</div>
+      <div class="topbarLeft">
+        <div class="brand">Task Manager</div>
 
-      <div class="search">
-        <input v-model="search" class="searchInput" placeholder="Search"/>
+        <div class="search">
+          <input v-model="search" class="searchInput" placeholder="Search"/>
+        </div>
+
+        <button class="createBtn" @click="openCreateTask">Create Task</button>
+        <button class="createListBtn" @click="openCreateList">Create List</button>
+        <button class="createListBtn" @click="openCreateSpace">Create Space</button>
+
       </div>
 
-      <button class="createBtn" @click="createTask">Creat Task</button>
+      <div class="topbarRight">
+        <nav class="topLinks">
+          <a class="topLink" href="#">Link four</a>
+          <a class="topLink" href="#">Link three</a>
+        </nav>
 
-      <nav class="topLinks">
-        <a class="topLink" href="#">Link four</a>
-        <a class="topLink" href="#">Link three</a>
-      </nav>
-
-      <div class="topIcons">
-        <button class="iconBtn" title="Help">?</button>
-        <button class="iconBtn" title="Settings">⚙</button>
-        <button class="iconBtn" title="Account">👤</button>
+        <div class="topIcons">
+          <button class="iconBtn" title="Help">?</button>
+          <button class="iconBtn" title="Settings" @click="setting">⚙</button>
+          <button class="iconBtn" title="Account">👤</button>
+        </div>
       </div>
+
     </header>
 
     <!-- BODY -->
@@ -295,13 +405,106 @@ const createTask = async () => {
           </div>
         </div>
 
-        <div v-else class="empty">
-          Maak eerst een list in deze space.
-        </div>
+        <!--        <div v-else class="empty">-->
+        <!--          Maak eerst een list in deze space.-->
+        <!--        </div>-->
 
       </main>
     </div>
   </div>
+
+  <!-- MODAL (wireframe) -->
+  <div v-if="isModalOpen" class="modalOverlay" @click.self="closeModal">
+    <div class="modal">
+      <div class="modalTabs">
+        <button
+          :class="{active: modalTab === 'task'}"
+          class="modalTab"
+          @click="modalTab = 'task'"
+        >
+          Create Task
+        </button>
+        <button
+          :class="{active: modalTab === 'list'}"
+          class="modalTab"
+          @click="modalTab = 'list'"
+        >
+          Create List
+        </button>
+
+        <button
+          :class="{active: modalTab === 'space'}"
+          class="modalTab"
+          @click="modalTab = 'space'"
+        >
+          Creat Space
+        </button>
+
+      </div>
+
+      <!-- CREATE TASK -->
+      <div v-if="modalTab === 'task'" class="modalBody">
+        <label class="field">
+          <span class="fieldLabel">Title...</span>
+          <input v-model="taskForm.title" class="fieldInput" type="text"/>
+        </label>
+
+        <label class="field">
+          <span class="fieldLabel">Description (optional)...</span>
+          <textarea v-model="taskForm.description" class="fieldInput fieldTextArea" rows="3"></textarea>
+        </label>
+
+        <label class="field">
+          <span class="fieldLabel">Status...</span>
+          <select v-model="taskForm.statusId" class="fieldInput">
+            <option v-for="st in statuses" :key="st.id" :value="st.id">
+              {{ st.title }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="fieldLabel">List...</span>
+          <select v-model="taskForm.listId" class="fieldInput">
+            <option :value="null">— kies —</option>
+            <option v-for="l in lists" :key="l.id" :value="l.id">
+              {{ l.name }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <!-- CREATE LIST -->
+      <div v-else-if="modalTab === 'list'" class="modalBody">
+        <label class="field">
+          <span class="fieldLabel">Title...</span>
+          <input v-model="listForm.name" class="fieldInput" type="text"/>
+        </label>
+        <div class="hint">List wordt aangemaakt in: <b>{{ currentSpaceName }}</b></div>
+      </div>
+
+      <!-- CREATE SPACE -->
+      <div v-else class="modalBody">
+        <label class="field">
+          <span class="fieldLabel">Title...</span>
+          <input v-model="spaceForm.name" class="fieldInput" type="text"/>
+        </label>
+
+        <label class="field">
+          <span class="fieldLabel">Description (optional)...</span>
+          <textarea v-model="spaceForm.description" class="fieldInput fieldTextArea" rows="3"></textarea>
+        </label>
+      </div>
+
+
+      <div class="modalFooter">
+        <button :disabled="modalSaving" class="modalSave" @click="saveModal">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+
 </template>
 
 <style scoped>
@@ -315,8 +518,32 @@ const createTask = async () => {
 .topbar {
   height: 64px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
   padding: 0 18px;
+  background: #1a2230;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 14px;
+}
+
+.topbarLeft {
+  height: 64px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: #1a2230;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 14px;
+}
+
+.topbarRight {
+  height: 64px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 25px;
   background: #1a2230;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   gap: 14px;
@@ -624,4 +851,119 @@ const createTask = async () => {
     grid-template-columns: 1fr;
   }
 }
+
+.createListBtn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.12);
+  color: #e9eef7;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+  padding: 16px;
+}
+
+.modal {
+  width: min(520px, 100%);
+  background: #ffffff;
+  color: #111827;
+  border-radius: 12px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.modalTabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 12px 0 12px;
+}
+
+.modalTab {
+  border: 1px solid rgba(17, 24, 39, 0.25);
+  background: #fff;
+  color: #111827;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.modalTab.active {
+  background: #dbeafe;
+  border-color: rgba(59, 130, 246, 0.6);
+}
+
+.modalBody {
+  padding: 14px 14px 6px 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.65);
+}
+
+.fieldInput {
+  width: 100%;
+  border: 0;
+  border-bottom: 2px solid rgba(17, 24, 39, 0.35);
+  padding: 8px 6px;
+  outline: none;
+  font-size: 13px;
+  background: transparent;
+}
+
+.fieldInput:focus {
+  border-bottom-color: rgba(59, 130, 246, 0.9);
+}
+
+.fieldTextArea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.hint {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.65);
+  padding: 8px 2px 2px 2px;
+}
+
+.modalFooter {
+  padding: 12px 14px 14px 14px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.modalSave {
+  min-width: 90px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: #dbeafe;
+  color: #111827;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.modalSave:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 </style>

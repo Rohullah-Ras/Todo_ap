@@ -29,7 +29,7 @@ export class AuthService {
       fullName: input.fullName,
     });
 
-    return this.signToken(user.id, user.email);
+    return this.signToken(Number(user.id), user.email);
   }
 
   async login(input: { email: string; password: string }) {
@@ -39,10 +39,10 @@ export class AuthService {
     const ok = await bcrypt.compare(input.password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('Onjuiste login');
 
-    return this.signToken(user.id, user.email);
+    return this.signToken(Number(user.id), user.email);
   }
 
-  private signToken(userId: string, email: string) {
+  private signToken(userId: number, email: string) {
     const access_token = this.jwt.sign({ sub: userId, email });
     return { access_token };
   }
