@@ -9,19 +9,27 @@
 
     <div class="stats">
       <div class="stat">
-        <div class="statNum">{{ stats.workspaces }}</div>
+        <div class="statNum">
+          {{ statsLoading ? '-' : stats.workspaces }}
+        </div>
         <div class="statLbl">Work Space</div>
       </div>
       <div class="stat">
-        <div class="statNum">{{ stats.todo }}</div>
+        <div class="statNum">
+          {{ statsLoading ? '-' : stats.todo }}
+        </div>
         <div class="statLbl">ToDo Task</div>
       </div>
       <div class="stat">
-        <div class="statNum">{{ stats.inProgress }}</div>
+        <div class="statNum">
+          {{ statsLoading ? '-' : stats.inProgress }}
+        </div>
         <div class="statLbl">InProgress Task</div>
       </div>
       <div class="stat">
-        <div class="statNum">{{ stats.done }}</div>
+        <div class="statNum">
+          {{ statsLoading ? '-' : stats.done }}
+        </div>
         <div class="statLbl">Done Task</div>
       </div>
     </div>
@@ -53,8 +61,9 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, ref} from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import {useAuthStore} from '@/api/auth'
+import {api} from '@/api/http'
 
 const auth = useAuthStore()
 
@@ -76,7 +85,6 @@ defineEmits(['back'])
 
 const initials = computed(() => auth.userInitials)
 
-// dummy stats (later uit API halen)
 const stats = ref({
   workspaces: 0,
   todo: 0,
@@ -84,9 +92,37 @@ const stats = ref({
   done: 0,
 })
 
+const statsLoading = ref(false)
+
+async function loadStats() {
+  statsLoading.value = true
+  try {
+    const res = await api.get('/stats/summary')
+    stats.value = {
+      workspaces: res.data?.workspaces ?? 0,
+      todo: res.data?.todo ?? 0,
+      inProgress: res.data?.inProgress ?? 0,
+      done: res.data?.done ?? 0,
+    }
+  } catch {
+    stats.value = {
+      workspaces: 0,
+      todo: 0,
+      inProgress: 0,
+      done: 0,
+    }
+  } finally {
+    statsLoading.value = false
+  }
+}
+
 function manageAccount() {
   alert('Later: manage account')
 }
+
+onMounted(() => {
+  loadStats()
+})
 </script>
 
 <style scoped>

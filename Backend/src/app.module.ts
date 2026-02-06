@@ -14,6 +14,7 @@ import { UsersModule } from './modules/users/users.module';
 import { TaskStatus } from './modules/status/task-status.entity';
 import { Space } from './modules/spaces/space.entity';
 import { SpacesModule } from './modules/spaces/spaces.module';
+import { StatsModule } from './modules/stats/stats.module';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -51,6 +52,7 @@ dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
     StatusesModule,
     AccountModule,
     SpacesModule,
+    StatsModule,
   ],
 })
 class AppModule {}
