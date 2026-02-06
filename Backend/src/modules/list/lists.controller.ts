@@ -26,6 +26,11 @@ export class ListsController {
     return this.listsService.findAll();
   }
 
+  @Get('user')
+  findAllForUser(@CurrentUser() user: any) {
+    return this.listsService.findAllForUser(user.id);
+  }
+
   @Get('space/:spaceId')
   findBySpace(
     @CurrentUser() user: any,

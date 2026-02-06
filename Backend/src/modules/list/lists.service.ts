@@ -28,6 +28,18 @@ export class ListsService {
     return this.listRepo.find({ order: { id: 'ASC' } });
   }
 
+  // GET /lists/user
+  findAllForUser(userId: string): Promise<List[]> {
+    return this.listRepo
+      .createQueryBuilder('list')
+      .leftJoinAndSelect('list.space', 'space')
+      .where('space.userId = :userId', { userId })
+      .andWhere('list.deletedAt IS NULL')
+      .andWhere('space.deletedAt IS NULL')
+      .orderBy('list.id', 'ASC')
+      .getMany();
+  }
+
   // GET /lists/:id
   async findOne(id: number): Promise<List> {
     const list = await this.listRepo.findOne({ where: { id } });
