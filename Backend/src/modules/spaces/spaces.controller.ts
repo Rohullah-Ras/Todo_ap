@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { SpacesService } from './spaces.service';
 import { CreateSpaceDto } from './dto/create-space.dto';
+import { UpdateSpaceDto } from './dto/update-space.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 
@@ -32,6 +33,15 @@ export class SpacesController {
   @Post()
   create(@CurrentUser() user: any, @Body() dto: CreateSpaceDto) {
     return this.spacesService.createForUser(user.id, dto);
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateSpaceDto,
+  ) {
+    return this.spacesService.update(user.id, id, dto);
   }
 
   @Patch(':id/restore')

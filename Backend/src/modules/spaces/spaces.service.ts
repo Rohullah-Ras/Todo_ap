@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Space } from './space.entity';
 import { CreateSpaceDto } from './dto/create-space.dto';
+import { UpdateSpaceDto } from './dto/update-space.dto';
 
 @Injectable()
 export class SpacesService {
@@ -44,6 +45,17 @@ export class SpacesService {
     if (!space) throw new NotFoundException(`Space #${id} not found`);
     await this.spaceRepo.softDelete(id);
     return { message: `Space #${id} moved to trash` };
+  }
+
+  async update(userId: string, id: number, dto: UpdateSpaceDto) {
+    const space = await this.spaceRepo.findOne({ where: { id, userId } });
+    if (!space) throw new NotFoundException(`Space #${id} not found`);
+
+    if (dto.name !== undefined) {
+      space.name = dto.name;
+    }
+
+    return this.spaceRepo.save(space);
   }
 
   // 2e delete -> permanent (alleen als al soft-deleted)

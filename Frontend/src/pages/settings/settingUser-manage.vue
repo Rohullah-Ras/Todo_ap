@@ -9,27 +9,19 @@
 
     <div class="stats">
       <div class="stat">
-        <div class="statNum">
-          {{ statsLoading ? '-' : stats.workspaces }}
-        </div>
+        <div class="statNum">{{ stats.workspaces }}</div>
         <div class="statLbl">Work Space</div>
       </div>
       <div class="stat">
-        <div class="statNum">
-          {{ statsLoading ? '-' : stats.todo }}
-        </div>
+        <div class="statNum">{{ stats.todo }}</div>
         <div class="statLbl">ToDo Task</div>
       </div>
       <div class="stat">
-        <div class="statNum">
-          {{ statsLoading ? '-' : stats.inProgress }}
-        </div>
+        <div class="statNum">{{ stats.inProgress }}</div>
         <div class="statLbl">InProgress Task</div>
       </div>
       <div class="stat">
-        <div class="statNum">
-          {{ statsLoading ? '-' : stats.done }}
-        </div>
+        <div class="statNum">{{ stats.done }}</div>
         <div class="statLbl">Done Task</div>
       </div>
     </div>
