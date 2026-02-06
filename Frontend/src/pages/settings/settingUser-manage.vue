@@ -31,21 +31,29 @@
         <div class="fieldLabel">Email</div>
         <div class="fieldLine">
           <input :value="userEmail" class="fieldInput" disabled type="email"/>
-          <span class="fieldIcon">✉</span>
+          <span class="fieldIcon">âœ‰</span>
         </div>
       </div>
 
       <div class="field">
         <div class="fieldLabel">Password</div>
         <div class="fieldLine">
-          <input class="fieldInput" disabled type="password" value="*************"/>
-          <span class="fieldIcon">🙈</span>
+          <input
+            :type="showPassword ? 'text' : 'password'"
+            class="fieldInput"
+            disabled
+            :value="passwordMask"
+          />
+          <button class="iconBtn" type="button" @click="togglePassword">
+            {{ showPassword ? '🙈' : '👁️' }}
+          </button>
         </div>
       </div>
 
       <button class="manageBtn" @click="manageAccount">Manage Account</button>
+      <button class="deleteBtn" @click="deleteAccount">Delete Account</button>
       <button class="backBtn" @click="$emit('back')">
-        ← Back to profile
+        â† Back to profile
       </button>
 
     </div>
@@ -54,10 +62,12 @@
 
 <script lang="ts" setup>
 import {computed, onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
 import {useAuthStore} from '@/api/auth'
 import {api} from '@/api/http'
 
 const auth = useAuthStore()
+const router = useRouter()
 
 const userEmail = computed(() => auth.userEmail ?? 'unknown@email.com')
 
@@ -85,6 +95,8 @@ const stats = ref({
 })
 
 const statsLoading = ref(false)
+const showPassword = ref(false)
+const passwordMask = ref('*************')
 
 async function loadStats() {
   statsLoading.value = true
@@ -110,6 +122,18 @@ async function loadStats() {
 
 function manageAccount() {
   alert('Later: manage account')
+}
+
+async function deleteAccount() {
+  const ok = confirm('Account verwijderen? Dit kan niet ongedaan worden.')
+  if (!ok) return
+  await api.delete('/account')
+  auth.logout()
+  await router.push('/login')
+}
+
+function togglePassword() {
+  showPassword.value = !showPassword.value
 }
 
 onMounted(() => {
@@ -234,6 +258,31 @@ onMounted(() => {
   color: #e9eef7;
   font-weight: 900;
   cursor: pointer;
+}
+
+.deleteBtn {
+  margin-top: 10px;
+  width: 180px;
+  height: 40px;
+  border-radius: 999px;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.iconBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #111827;
+  color: #e9eef7;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
 }
 
 @media (max-width: 1100px) {
