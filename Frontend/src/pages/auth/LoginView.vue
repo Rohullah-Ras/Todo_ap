@@ -1,16 +1,13 @@
 <script setup>
 import {ref} from 'vue'
 import {useRouter} from 'vue-router'
-import {useAuthStore} from '@/api/auth'
+import {useAuthStore} from '@/api/auth.ts'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-const fullName = ref('')
 const email = ref('')
 const password = ref('')
-const confirmPassword = ref('')
-const agree = ref(false)
 
 const loading = ref(false)
 const errorMsg = ref('')
@@ -18,31 +15,18 @@ const errorMsg = ref('')
 const submit = async () => {
   errorMsg.value = ''
 
-  if (!agree.value) {
-    errorMsg.value = 'Je moet akkoord gaan met de voorwaarden.'
-    return
-  }
-  if (password.value !== confirmPassword.value) {
-    errorMsg.value = 'Wachtwoorden komen niet overeen.'
-    return
-  }
-  if (password.value.length < 6) {
-    errorMsg.value = 'Wachtwoord moet minimaal 6 tekens zijn.'
+  if (!email.value || !password.value) {
+    errorMsg.value = 'Vul email en wachtwoord in.'
     return
   }
 
   loading.value = true
   try {
-    await auth.signUp({
-      email: email.value,
-      password: password.value,
-      fullName: fullName.value,
-    })
+    await auth.signIn({email: email.value, password: password.value})
     router.push('/dashboard')
   } catch (e) {
-    // simpele foutmelding (later kunnen we mooier maken)
-    errorMsg.value = 'Registreren mislukt. Probeer een andere email.'
     console.error(e)
+    errorMsg.value = 'Login mislukt. Controleer je gegevens.'
   } finally {
     loading.value = false
   }
@@ -56,8 +40,6 @@ const submit = async () => {
       <div class="brand">Task Manager</div>
 
       <nav class="links">
-        <a class="link" href="#">Link four</a>
-        <a class="link" href="#">Link three</a>
       </nav>
 
       <div class="icons">
@@ -73,45 +55,46 @@ const submit = async () => {
 
       <section class="panel">
         <div class="card">
-          <h1 class="title">SignUp</h1>
-          <p class="subtitle">Create an account</p>
+          <h1 class="title">SignIn</h1>
+          <p class="subtitle">Welcome back</p>
 
           <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
 
           <form class="form" @submit.prevent="submit">
             <label class="field">
-              <span class="label">Full Name</span>
-              <input v-model="fullName" class="input" placeholder="Name..." type="text"/>
+              <span class="label">Email</span>
+              <input
+                v-model="email"
+                class="input"
+                placeholder="Email address..."
+                required
+                type="email"
+              />
             </label>
 
             <label class="field">
-              <span class="label">Enter your e-mail</span>
-              <input v-model="email" class="input" placeholder="Email address..." required type="email"/>
-            </label>
-
-            <label class="field">
-              <span class="label">Create Password</span>
-              <input v-model="password" class="input" placeholder="********" required type="password"/>
-            </label>
-
-            <label class="field">
-              <span class="label">Repeat password</span>
-              <input v-model="confirmPassword" class="input" placeholder="********" required type="password"/>
-            </label>
-
-            <label class="checkbox">
-              <input v-model="agree" type="checkbox"/>
-              <span>I agree to the <b>Terms of User</b></span>
+              <span class="label">Password</span>
+              <input
+                v-model="password"
+                class="input"
+                placeholder="********"
+                required
+                type="password"
+              />
             </label>
 
             <div class="actions">
               <button :disabled="loading" class="btn" type="submit">
-                {{ loading ? 'Signing up...' : 'Sign Up' }}
+                {{ loading ? 'Signing in...' : 'Sign In' }}
               </button>
 
-              <button class="link-btn" type="button" @click="router.push('/login')">
-                Sign In →
+              <button class="link-btn" type="button" @click="router.push('/register')">
+                Sign Up →
               </button>
+            </div>
+
+            <div class="hint">
+              <span>Tip: na login ga je automatisch naar Dashboard.</span>
             </div>
           </form>
         </div>
@@ -163,6 +146,9 @@ const submit = async () => {
 .icons {
   display: flex;
   gap: 10px;
+  color: black;
+  font-size: 20px;
+  font-weight: bold;
 }
 
 .icon-btn {
@@ -186,7 +172,7 @@ const submit = async () => {
 /* left big background */
 .hero {
   border-radius: 18px;
-  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.9), rgba(240, 240, 240, 0.6)),
+  background: radial-gradient(circle at 30% 20%, #EAE0CF, #FCF8F8),
   linear-gradient(135deg, #f3f4f6, #eef1f6);
   border: 1px solid #e7e7e7;
   position: relative;
@@ -276,19 +262,11 @@ const submit = async () => {
   border-radius: 10px;
   padding: 0 12px;
   outline: none;
+  color: #333;
 }
 
 .input:focus {
   border-color: #b8b8b8;
-}
-
-.checkbox {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: #555;
-  margin-top: 4px;
 }
 
 .actions {
@@ -303,7 +281,7 @@ const submit = async () => {
   padding: 0 18px;
   border: none;
   border-radius: 999px;
-  background: #f2b7b7;
+  background: #c7d8ff;
   cursor: pointer;
   font-weight: 600;
 }
@@ -323,6 +301,12 @@ const submit = async () => {
 
 .link-btn:hover {
   text-decoration: underline;
+}
+
+.hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #777;
 }
 
 /* responsive */

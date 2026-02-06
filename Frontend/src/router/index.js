@@ -1,6 +1,6 @@
 import {createRouter, createWebHistory} from 'vue-router'
-import LoginView from '../pages/LoginView.vue'
-import RegisterView from '../pages/RegisterView.vue'
+import LoginView from '../pages/auth/LoginView.vue'
+import RegisterView from '../pages/auth/RegisterView.vue'
 import DashBoard from '../pages/DashBoard.vue'
 import BoardView from '../pages/BoardView.vue'
 import {useAuthStore} from "@/api/auth";
