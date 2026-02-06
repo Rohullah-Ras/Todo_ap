@@ -318,8 +318,7 @@ const saveModal = async () => {
 
       <div class="topbarRight">
         <nav class="topLinks">
-          <a class="topLink" href="#">Link four</a>
-          <a class="topLink" href="#">Link three</a>
+
         </nav>
 
         <div class="topIcons">
