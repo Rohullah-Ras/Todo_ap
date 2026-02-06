@@ -3,8 +3,13 @@ import LoginView from '../pages/LoginView.vue'
 import RegisterView from '../pages/RegisterView.vue'
 import DashBoard from '../pages/DashBoard.vue'
 import BoardView from '../pages/BoardView.vue'
-import Setting from '../pages/Setting.vue'
 import {useAuthStore} from "@/api/auth";
+import SettingLayout from '../pages/settings/SettingLayout.vue'
+import SettingsGeneral from '../pages/settings/SettingsGeneral.vue'
+import SettingsUser from '../pages/settings/SettingsUser.vue'
+import SettingsLists from '../pages/settings/SettingsLists.vue'
+import SettingsSpaces from '../pages/settings/SettingsSpaces.vue'
+import Setting from '../pages/Setting.vue'
 
 const routes = [
   {path: '/', redirect: '/login'},
@@ -27,11 +32,20 @@ const routes = [
     props: true,
   },
 
+  {path: '/settings', name: 'Setting', component: Setting, meta: {requiresAuth: true}},
+
+
   {
     path: '/settings',
-    name: 'Setting',
-    component: Setting,
+    component: SettingLayout,
     meta: {requiresAuth: true},
+    redirect: '/settings/general',
+    children: [
+      {path: 'general', name: 'SettingsGeneral', component: SettingsGeneral},
+      {path: 'user', name: 'SettingsUser', component: SettingsUser},
+      {path: 'items', name: 'SettingsLists', component: SettingsLists},     // “Items and Lists”
+      {path: 'workspace', name: 'SettingsSpaces', component: SettingsSpaces} // “Work Space”
+    ],
   },
 ]
 

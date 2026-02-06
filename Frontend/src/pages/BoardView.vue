@@ -132,8 +132,8 @@ const openSpace = async (id) => {
   await loadBoard()
 }
 
-const setting = () => {
-  router.push('/settings')
+const setting = async () => {
+  await router.push('/settings')
 }
 
 const tasksBy = (listId, statusId) => {
@@ -215,6 +215,8 @@ const loadBoard = async () => {
 onMounted(async () => {
   await loadSpaces()
   await loadBoard()
+  activeTab.value = "user"
+
 })
 
 

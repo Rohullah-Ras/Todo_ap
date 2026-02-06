@@ -132,8 +132,8 @@ const openSpace = async (id) => {
   await loadBoard()
 }
 
-const setting = () => {
-  router.push('/settings')
+const setting = async () => {
+  await router.push('/settings')
 }
 
 const tasksBy = (listId, statusId) => {
@@ -215,6 +215,8 @@ const loadBoard = async () => {
 onMounted(async () => {
   await loadSpaces()
   await loadBoard()
+  activeTab.value = "user"
+
 })
 
 
@@ -323,7 +325,12 @@ const saveModal = async () => {
         <div class="topIcons">
           <button class="iconBtn" title="Help">?</button>
           <button class="iconBtn" title="Settings" @click="setting">⚙</button>
-          <button class="iconBtn" title="Account">👤</button>
+          <!-- huidige user avatar -->
+          <div class="avatars">
+            <div :title="auth.userEmail ?? 'User'" class="avatar">
+              {{ auth.userInitials }}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -382,18 +389,29 @@ const saveModal = async () => {
             </button>
           </div>
         </div>
+        <div class="sidebarDL">
+          <button class="dashBtn" @click="router.push('/dashboard')">Dashboard</button>
+          <button class="logoutBtn" @click="logout">Logout</button>
+        </div>
 
-        <button class="dashBtn" @click="router.push('/dashboard')">Dashboard</button>
-        <button class="logoutBtn" @click="logout">Logout</button>
       </aside>
 
       <!-- BOARD -->
       <main class="board">
         <div class="boardTop">
           <div class="chips">
+
+            <!-- huidige user avatar -->
+            <div class="avatars">
+              <div :title="auth.userEmail ?? 'User'" class="avatar">
+                {{ auth.userInitials }}
+              </div>
+            </div>
             <span class="chip">Space</span>
             <span class="chip">Project</span>
             <span class="chip">Type</span>
+
+
           </div>
 
           <div class="boardTitle">
@@ -668,6 +686,8 @@ const saveModal = async () => {
   height: calc(100vh - 96px);
   position: sticky;
   top: 80px;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebarTitle {
@@ -717,6 +737,14 @@ const saveModal = async () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+
+.sidebarDL {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .spaceBtn, .listBtn {
@@ -1005,6 +1033,28 @@ const saveModal = async () => {
 .modalSave:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+
+.avatars {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  border: none;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 900;
+  color: #111827;
+  background: #f59e0b;
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 </style>
