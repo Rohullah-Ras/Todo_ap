@@ -147,16 +147,32 @@ const onDragStart = (event, task) => {
   event?.dataTransfer?.setData('text/plain', String(task.id))
 }
 
-const onDrop = (listId, statusId, position) => {
+const onDrop = async (listId, statusId, position) => {
   if (!dragging.value) return
-  const idx = tasks.value.findIndex(t => t.id === dragging.value.id)
+  const moved = dragging.value
+  const idx = tasks.value.findIndex(t => t.id === moved.id)
   if (idx !== -1) {
+    const prev = tasks.value[idx]
     tasks.value[idx] = {
-      ...tasks.value[idx],
+      ...prev,
       listId,
       statusId,
       position,
     }
+    dragging.value = null
+
+    try {
+      await api.patch(`/tasks/${moved.id}/move`, {
+        listId,
+        statusId,
+        position,
+      })
+      await loadBoard()
+    } catch (err) {
+      console.error('Move task failed:', err)
+      tasks.value[idx] = prev
+    }
+    return
   }
   dragging.value = null
 }
