@@ -6,5 +6,5 @@ export class UpdateSpaceDto {
   @IsOptional()
   @IsString()
   @MinLength(1)
-  name?: string;
+  declare name?: string;
 }
