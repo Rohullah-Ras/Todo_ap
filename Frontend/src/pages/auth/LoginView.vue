@@ -94,7 +94,7 @@ const submit = async () => {
             </div>
 
             <div class="hint">
-              <span>Tip: na login ga je automatisch naar Dashboard.</span>
+              <span></span>
             </div>
           </form>
         </div>

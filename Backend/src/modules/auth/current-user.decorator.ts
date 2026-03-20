@@ -3,6 +3,6 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 export const CurrentUser = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const req = ctx.switchToHttp().getRequest();
-    return req.user; // komt uit JwtStrategy validate()
+    return req.user; // komt uit \src\shared\config\JwtStrategy validate()
   },
 );

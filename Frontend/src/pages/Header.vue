@@ -64,9 +64,9 @@ export default {
   height: 34px;
   padding: 0 14px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #1e8e3e;
-  color: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.2);
+  background: #ffffff;
+  color: #111827;
   font-weight: 700;
   cursor: pointer;
 }

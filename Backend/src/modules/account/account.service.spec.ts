@@ -12,7 +12,7 @@ vi.mock('bcrypt', () => {
             hash: vi.fn(),
             compare: vi.fn(),
         },
-        // voor het geval je code named exports gebruikt:
+        // voor het geval dat code named exports gebruikt:
         hash: vi.fn(),
         compare: vi.fn(),
     };

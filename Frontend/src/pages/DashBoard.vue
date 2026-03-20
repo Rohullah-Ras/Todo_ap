@@ -650,9 +650,9 @@ const saveModal = async () => {
   height: 34px;
   padding: 0 14px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #1e8e3e;
-  color: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.2);
+  background: #ffffff;
+  color: #111827;
   font-weight: 700;
   cursor: pointer;
 }
@@ -941,9 +941,9 @@ const saveModal = async () => {
   height: 34px;
   padding: 0 12px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.12);
-  color: #e9eef7;
+  border: 1px solid rgba(17, 24, 39, 0.2);
+  background: #ffffff;
+  color: #111827;
   font-weight: 700;
   cursor: pointer;
 }
@@ -1011,6 +1011,7 @@ const saveModal = async () => {
   outline: none;
   font-size: 13px;
   background: transparent;
+  color: #111827;
 }
 
 .fieldInput:focus {
